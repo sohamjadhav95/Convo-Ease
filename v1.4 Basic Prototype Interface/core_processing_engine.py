@@ -1,7 +1,5 @@
 from groq import Groq
 
-from groq import Groq
-
 # Streaming core logic  
 
 DEFAULT_SYSTEM_PROMPT = "You are a group chat assistant. Follow the rules provided to moderate and respond to messages."
