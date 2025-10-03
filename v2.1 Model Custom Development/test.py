@@ -144,7 +144,4 @@ Accuracy: 93.94% (93/99 correct)
 
 Gemma2-9b-it
 Accuracy: 94.95% (94/99 correct)
-
-Llama-3.1-8b-instant
-Accuracy: 97.98% (97/99 correct)
 '''
