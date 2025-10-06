@@ -14,7 +14,7 @@ DEFAULT_SYSTEM_PROMPT = (
 # =======================
 # Path to your local model directory
 # =======================
-MODEL_DIR = Path(r"D:\Convo-Ease\Gemma-2-Ataraxy-9B")  # <-- Change to your model path
+MODEL_DIR = Path(r"D:\convo-ease\gemma-2-9b-it")  # <-- Change to your model path
 
 # =======================
 # Load tokenizer and model locally

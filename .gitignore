@@ -1,3 +1,5 @@
 # Ignore model directories
 /Base\ Models/
+/Base_Models/
 /Trained\ Models/
+
