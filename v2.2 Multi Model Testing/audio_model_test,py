@@ -1,0 +1,111 @@
+from pathlib import Path
+import torch
+from faster_whisper import WhisperModel
+from transformers import AutoTokenizer, AutoModelForCausalLM
+
+# CONFIG
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+TEXT_MODEL_DIR = Path(r"D:\convo-ease\Base_Models\gemma-2-9b-it")
+
+print("Loading text validation model...")
+tokenizer = AutoTokenizer.from_pretrained(TEXT_MODEL_DIR)
+text_model = AutoModelForCausalLM.from_pretrained(
+    TEXT_MODEL_DIR,
+    device_map="auto",
+    torch_dtype=torch.float16 if DEVICE == "cuda" else torch.float32
+)
+
+print("Loading Faster Whisper transcription model...")
+whisper_model = WhisperModel("small", device=DEVICE, compute_type="float16")
+
+def transcribe_audio(audio_path: str) -> str:
+    """Transcribe audio file to text using Faster Whisper."""
+    print(f"\nTranscribing: {audio_path}")
+    segments, _ = whisper_model.transcribe(audio_path, beam_size=5)
+    transcription = " ".join([segment.text for segment in segments]).strip()
+    print(f"Transcription: {transcription}")
+    return transcription
+
+def local_model_response(rules: str, transcription: str) -> str:
+    """Use local LLM to validate transcription against rules."""
+    # Format prompt properly for Gemma-2 instruction format
+    messages = [
+        {
+            "role": "user",
+            "content": f"""You are an audio content validator. Analyze the transcription and determine if it follows the rules.
+
+Rules:
+{rules}
+
+Audio Transcription:
+{transcription}
+
+Respond with ONLY ONE WORD: either "VALID" or "INVALID". No explanation, no other text."""
+        }
+    ]
+    
+    # Use chat template for proper formatting
+    prompt = tokenizer.apply_chat_template(
+        messages,
+        tokenize=False,
+        add_generation_prompt=True
+    )
+    
+    inputs = tokenizer(prompt, return_tensors="pt").to(text_model.device)
+    
+    # Generate with better parameters
+    output_ids = text_model.generate(
+        **inputs,
+        max_new_tokens=10,  # Only need one word
+        temperature=0.1,  # More deterministic
+        do_sample=True,
+        pad_token_id=tokenizer.eos_token_id,
+        eos_token_id=tokenizer.eos_token_id
+    )
+    
+    # Decode only the generated part (exclude the prompt)
+    generated_ids = output_ids[0][inputs['input_ids'].shape[1]:]
+    response = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+    
+    print(f"Model raw response: '{response}'")
+    
+    # Extract VALID or INVALID from response
+    response_upper = response.upper()
+    if "VALID" in response_upper and "INVALID" not in response_upper:
+        return "VALID"
+    elif "INVALID" in response_upper:
+        return "INVALID"
+    else:
+        # Fallback: if unclear, mark as invalid for safety
+        print(f"Warning: Unclear response, defaulting to INVALID")
+        return "INVALID"
+
+def validate_transcription(rules: str, transcription: str):
+    """Validate transcription against rules."""
+    response = local_model_response(rules, transcription)
+    return response, transcription
+
+if __name__ == "__main__":
+    rules = """Audio content should be educational or related to science and learning.
+Personal conversations, promotions, or offensive content are not allowed.
+Ensure speech content aligns with respectful and kind representation."""
+
+    audio_paths = [
+        r"D:\convo-ease\Datasets\Test Audios\gym.mp3",
+        r"D:\convo-ease\Datasets\Test Audios\Peo.mp3",
+        r"D:\convo-ease\Datasets\Test Audios\How LLM Works (Explained) _ The Ultimate Guide To LLM _ Day 1_Tokenization 🔥 #shorts #ai.mp3",
+    ]
+
+    print(f"\n{'='*140}")
+    print(f"{'Audio File':<50} | {'Transcription':<60} | {'Validation'}")
+    print(f"{'='*140}")
+
+    for audio in audio_paths:
+        transcription = transcribe_audio(audio)
+        status, _ = validate_transcription(rules, transcription)
+        audio_name = Path(audio).name
+        truncated_trans = transcription[:57] + "..." if len(transcription) > 57 else transcription
+        print(f"{audio_name:<50} | {truncated_trans:<60} | {status}")
+        print("-" * 140)
+
+    print("\nValidation complete!")
