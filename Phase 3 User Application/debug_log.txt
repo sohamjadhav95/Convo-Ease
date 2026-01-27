@@ -1,0 +1,12 @@
+Validating msg: 'Hello students' for group 287F9F
+API Response: PASS
+Validating msg: 'Let's play cricket' for group 287F9F
+API Response: FLAGGED: The message is not education-related.
+Validating msg: 'today's evening class is canclled' for group 287F9F
+API Response: PASS
+Validating msg: 'Hello mam can you tell exact reason to calclled the class' for group 287F9F
+API Response: PASS
+Validating msg: 'Go to hell mam' for group 287F9F
+API Response: FLAGGED: The message is disrespectful.
+Validating msg: 'Science is an amazing subject' for group 287F9F
+API Response: PASS

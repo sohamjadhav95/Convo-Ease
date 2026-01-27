@@ -1,0 +1,18 @@
+message_id,group_id,username,message,status,reason,timestamp
+ec2b598f-d9ae-42a2-8c39-6cd5bef7577c,287F9F,sohamjadhav95,Hello students,PASS,nan,2026-01-27 14:22:21
+7ee1140f-3539-45eb-b11a-19f88a9ceefa,287F9F,sohamjadhav95,go to hell,PASS,nan,2026-01-27 14:22:34
+9700f06a-e9d4-4757-985f-698cd14f956d,287F9F,sohamjadhav95,what is today,PASS,nan,2026-01-27 14:23:02
+26912846-fcc5-470b-abfb-31f386905706,287F9F,sohamjadhav95,go to hell,PASS,nan,2026-01-27 14:25:15
+6a2cfb8d-1cee-4e7d-84fc-d7d1b210f933,287F9F,sohamjadhav95,what the hell,PASS,nan,2026-01-27 14:25:55
+ee6bf181-cefe-4b2e-9644-8f6d8a5eda93,287F9F,sohamjadhav95,lets play cricket,PASS,nan,2026-01-27 14:26:03
+e1a1d9c6-eb67-4b49-96cd-895a621ba680,287F9F,sohamjadhav95,lets play cricket,PASS,nan,2026-01-27 14:26:33
+548a1764-f957-4a6a-8545-f7402b3192f7,287F9F,sohamjadhav95,go to hell,FLAGGED,Moderation Unavailable (Status 404),2026-01-27 14:30:03
+e36948c0-e1f0-4474-89e2-b7285cb38c9d,287F9F,sohamjadhav95,lets play cricket,FLAGGED,Moderation Unavailable (Status 404),2026-01-27 14:30:27
+1a0e9314-26a5-438f-ad94-8e5676dc42e8,287F9F,sohamjadhav95,today's class is at evening,FLAGGED,Moderation Unavailable (Status 404),2026-01-27 14:30:41
+b4f61e9f-1333-4e15-99fa-341223089b88,287F9F,sohamjadhav95,LLM have encodings,FLAGGED,Moderation Unavailable (Status 404),2026-01-27 14:31:03
+66240015-2170-48bc-8e64-99a415980670,287F9F,sohamjadhav95,Hello students,PASS,nan,2026-01-27 19:28:42
+b0ee50c1-4caa-4976-a0fd-f37332f1d82e,287F9F,sohamjadhav95,Let's play cricket,FLAGGED,The message is not education-related.,2026-01-27 19:28:55
+276eb1f5-9f60-4743-93c0-ea1527274489,287F9F,sohamjadhav95,today's evening class is canclled,PASS,nan,2026-01-27 19:29:19
+cb5b72b3-5bfb-4cbe-b1a6-20b26fb460d8,287F9F,aarvi01,Hello mam can you tell exact reason to calclled the class,PASS,nan,2026-01-27 19:31:29
+a86c6a85-d262-449c-8a88-ce2e392b7a93,287F9F,aarvi01,Go to hell mam,FLAGGED,The message is disrespectful.,2026-01-27 19:31:42
+ac2d81e8-6da0-4b42-9afb-f7379aced7b4,287F9F,aarvi01,Science is an amazing subject,PASS,,2026-01-27 19:32:22
