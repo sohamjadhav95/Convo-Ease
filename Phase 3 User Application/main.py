@@ -9,7 +9,7 @@ import random
 from openai import OpenAI
 
 # Configuration
-OPENROUTER_API_KEY = "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"
+OPENROUTER_API_KEY = ""
 API_URL = "https://openrouter.ai/api/v1" # Base URL for SDK
 MODEL_NAME = "openai/gpt-oss-120b:free"
 
@@ -201,19 +201,44 @@ class ModerationService:
         if not rules:
             return True, "No rules set."
 
+        # Fetch last 6 messages for context
+        all_msgs = DataManager.load_messages(group_id)
+        # Sort by timestamp to be safe (though CSV is append-only)
+        # Assuming timestamp format allows string sort, or we rely on append order
+        # We'll take tail 6
+        recent_msgs = all_msgs.tail(6)
+        
+        context_str = ""
+        if not recent_msgs.empty:
+            context_list = []
+            for _, row in recent_msgs.iterrows():
+                context_list.append(f"{row['username']}: {row['message']}")
+            context_str = "\n".join(context_list)
+
         system_prompt = f"""
         You are a strict Group Chat Moderator.
-        Your task is to validate user messages against the following Admin Rules:
+        
+        ADMIN RULES:
         {rules}
 
-        If the message follows the rules, output PASS.
-        If the message violates any rule, output FLAGGED followed by a short explanation for the user.
-        Do not explain if it passes.
+        CHAT CONTEXT (Last several messages):
+        {context_str}
+
+        YOUR TASK:
+        Validate the following NEW message. 
+        Use the properties of the CHAT CONTEXT to determine if the message is relevant (e.g. a "Yes" to a previous question is valid).
+        However, if the NEW message explicitly violates a rule (e.g. insults, spam), you must FLAG it regardless of context.
+
+        NEW MESSAGE: "{message_content}"
+
+        OUTPUT FORMAT:
+        - If compliant: PASS
+        - If violation: FLAGGED <reason>
         """
 
         messages = [
             {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Message to validate: '{message_content}'"}
+            {"role": "user", "content": "Analyze the NEW MESSAGE."}
         ]
 
         try:
