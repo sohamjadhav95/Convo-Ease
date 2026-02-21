@@ -43,3 +43,47 @@
 [2026-02-21 13:10:09] [INFO] [processing_engine] Processing with plugin: text_moderation
 [2026-02-21 13:10:15] [INFO] [processing_engine] Moderation API response for 'Todays science class is canclled...': PASS
 [2026-02-21 13:10:15] [INFO] [message_store] Message saved: [PASS] sohamjadhav95 in group 273A57
+[2026-02-21 13:14:09] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:14:09] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:14:09] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:14:11] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:14:11] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:14:11] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:14:25] [INFO] [user_store] Login successful: sohamjadhav95
+[2026-02-21 13:14:48] [INFO] [processing_engine] Processing with plugin: text_moderation
+[2026-02-21 13:14:50] [ERROR] [processing_engine] Moderation API error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+[2026-02-21 13:14:50] [INFO] [message_store] Message saved: [FLAGGED] sohamjadhav95 in group 273A57
+[2026-02-21 13:15:01] [INFO] [processing_engine] Processing with plugin: text_moderation
+[2026-02-21 13:15:02] [ERROR] [processing_engine] Moderation API error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+[2026-02-21 13:15:02] [INFO] [message_store] Message saved: [FLAGGED] sohamjadhav95 in group 273A57
+[2026-02-21 13:15:24] [INFO] [processing_engine] Processing with plugin: text_moderation
+[2026-02-21 13:15:26] [ERROR] [processing_engine] Moderation API error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+[2026-02-21 13:15:26] [INFO] [message_store] Message saved: [FLAGGED] sohamjadhav95 in group 273A57
+[2026-02-21 13:15:56] [INFO] [processing_engine] Processing with plugin: text_moderation
+[2026-02-21 13:15:58] [ERROR] [processing_engine] Moderation API error: Error code: 401 - {'error': {'message': 'User not found.', 'code': 401}}
+[2026-02-21 13:15:58] [INFO] [message_store] Message saved: [FLAGGED] sohamjadhav95 in group 994055
+[2026-02-21 13:16:42] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:16:42] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:16:42] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:17:01] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:17:01] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:17:01] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:17:11] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:17:11] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:17:11] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:17:19] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:17:19] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:17:19] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:18:03] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:18:03] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:18:03] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:18:05] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 13:18:05] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 13:18:05] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-21 13:18:19] [INFO] [user_store] Login successful: sohamjadhav95
+[2026-02-21 13:18:33] [INFO] [processing_engine] Processing with plugin: text_moderation
+[2026-02-21 13:18:37] [INFO] [processing_engine] Moderation API response for 'Hello students greet to everyone...': PASS
+[2026-02-21 13:18:37] [INFO] [message_store] Message saved: [PASS] sohamjadhav95 in group 273A57
+[2026-02-21 13:18:56] [INFO] [processing_engine] Processing with plugin: text_moderation
+[2026-02-21 13:19:01] [INFO] [processing_engine] Moderation API response for 'we are going to make fun...': FLAGGED Not educational content.
+[2026-02-21 13:19:01] [INFO] [message_store] Message saved: [FLAGGED] sohamjadhav95 in group 273A57
