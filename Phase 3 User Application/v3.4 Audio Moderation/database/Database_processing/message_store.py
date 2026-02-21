@@ -99,6 +99,7 @@ class MessageStore:
             "flagged_rate": 0,
             "text_count": 0,
             "image_count": 0,
+            "audio_count": 0,
             "top_flagged_users": [],
             "flagged_reasons": [],
             "member_activity": [],
@@ -117,10 +118,12 @@ class MessageStore:
         pass_rate     = round((pass_count / total) * 100) if total > 0 else 0
         flagged_rate  = 100 - pass_rate
 
-        # Image vs text (detected by [IMAGE] prefix in message content)
+        # Image vs audio vs text (detected by message prefix)
         image_mask  = msgs["message"].str.startswith("[IMAGE]", na=False)
+        audio_mask  = msgs["message"].str.startswith("[AUDIO]", na=False)
         image_count = int(image_mask.sum())
-        text_count  = total - image_count
+        audio_count = int(audio_mask.sum())
+        text_count  = total - image_count - audio_count
 
         # Top flagged users
         if not flagged_df.empty:
@@ -163,11 +166,14 @@ class MessageStore:
         # Show last 20, most recent first. For images, use the AI summary.
         def _build_message_entry(row):
             is_image = str(row.get("message", "")).startswith("[IMAGE]")
+            is_audio = str(row.get("message", "")).startswith("[AUDIO]")
             summary_col = row.get("summary", "")
             if is_image:
-                # Use stored AI summary for display
-                display = summary_col if summary_col else str(row.get("message", "")).replace("[IMAGE]", "").strip()
+                display  = summary_col if summary_col else "[Image]"
                 msg_type = "image"
+            elif is_audio:
+                display  = summary_col if summary_col else "[Audio transcription unavailable]"
+                msg_type = "audio"
             else:
                 display  = str(row.get("message", ""))
                 msg_type = "text"
@@ -199,6 +205,7 @@ class MessageStore:
             "flagged_rate":      flagged_rate,
             "text_count":        text_count,
             "image_count":       image_count,
+            "audio_count":       audio_count,
             "top_flagged_users": top_flagged_users,
             "flagged_reasons":   flagged_reasons,
             "member_activity":   member_activity,

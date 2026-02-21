@@ -346,21 +346,199 @@ class ImageModerationPlugin(ProcessingPlugin):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# AUDIO MODERATION PLUGIN
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class AudioModerationPlugin(ProcessingPlugin):
+    """
+    Moderates audio messages using a three-step pipeline (mirrors ImageModerationPlugin):
+      Step 1 — Transcribe:  Converts base64 audio to text via Google Speech Recognition
+                            (free, no API key). Supports WAV natively; converts other
+                            formats (mp3, ogg, webm, m4a) to WAV using pydub.
+      Step 2 — Summarize:   Passes the raw transcript to the AI model to produce a
+                            concise 1-2 sentence summary, just like image summarization.
+                            This handles long transcripts gracefully.
+      Step 3 — Moderate:    Feeds the summary to TextModerationPlugin against group
+                            rules — reusing 100% of the text moderation system.
+
+    Input:  { "audio_data": str (base64), "mime_type": str, "rules": str }
+    Output: { "allowed": bool, "reason": str, "summary": str, "transcript": str }
+    """
+    name = "audio_moderation"
+
+    def __init__(self, text_model_config):
+        self.text_config    = text_model_config
+        self._api_key       = text_model_config.get("api_key", "")
+        self._api_base_url  = text_model_config.get("base_url", "")
+        self._model         = text_model_config.get("model", "")
+        self._text_moderator = TextModerationPlugin(text_model_config)
+
+        from openai import OpenAI
+        self._client = OpenAI(
+            api_key=self._api_key,
+            base_url=self._api_base_url,
+        )
+        logger.info("AudioModerationPlugin initialized (Google SR + AI summarization)")
+
+    def get_input_schema(self):
+        return {
+            "audio_data": "str — Base64-encoded audio bytes",
+            "mime_type":  "str — MIME type e.g. 'audio/wav', 'audio/mpeg', 'audio/ogg'",
+            "rules":      "str — The group's moderation rules",
+        }
+
+    def get_output_schema(self):
+        return {
+            "allowed":    "bool — Whether the audio content is allowed",
+            "reason":     "str  — Explanation if flagged (empty if allowed)",
+            "summary":    "str  — AI-generated concise summary of the audio content",
+            "transcript": "str  — Full raw speech-to-text transcript",
+        }
+
+    def process(self, input_data, context=None):
+        import base64, io
+        audio_data = input_data.get("audio_data", "")
+        mime_type  = input_data.get("mime_type", "audio/wav")
+        rules      = input_data.get("rules", "")
+
+        if not audio_data:
+            return {"allowed": False, "reason": "No audio data provided.", "summary": "", "transcript": ""}
+
+        # ── Step 1: Transcribe ───────────────────────────────────────────────
+        transcript = self._transcribe(audio_data, mime_type)
+        if transcript is None:
+            return {
+                "allowed":    False,
+                "reason":     "Audio could not be transcribed. Upload blocked for safety.",
+                "summary":    "",
+                "transcript": ""
+            }
+        logger.info(f"Audio transcript: {transcript[:120]}")
+
+        if not transcript.strip():
+            return {"allowed": True, "reason": "", "summary": "(no speech detected)", "transcript": ""}
+
+        # ── Step 2: Summarize the transcript with AI ─────────────────────────
+        summary = self._summarize_transcript(transcript)
+        if summary is None:
+            # If summarization fails, fall back to using the raw transcript
+            logger.warning("Transcript summarization failed — falling back to raw transcript for moderation.")
+            summary = transcript
+        logger.info(f"Audio summary: {summary[:120]}")
+
+        # ── Step 3: Moderate the summary against group rules ─────────────────
+        if not rules:
+            return {"allowed": True, "reason": "", "summary": summary, "transcript": transcript}
+
+        moderation = self._text_moderator._process_api(
+            message=summary,
+            rules=rules,
+            recent_messages=[]
+        )
+        return {
+            "allowed":    moderation["allowed"],
+            "reason":     moderation["reason"],
+            "summary":    summary,
+            "transcript": transcript,
+        }
+
+    def _summarize_transcript(self, transcript):
+        """
+        Step 2 — Call the AI model to produce a concise 1-2 sentence summary
+        of the raw speech transcript. Handles long transcriptions gracefully.
+        Returns summary string, or None on failure.
+        """
+        try:
+            completion = self._client.chat.completions.create(
+                model=self._model,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are a content analysis assistant. "
+                            "Summarize audio transcripts concisely and objectively."
+                        )
+                    },
+                    {
+                        "role": "user",
+                        "content": (
+                            "Summarize the following audio transcript in 1-2 sentences. "
+                            "Focus on: the main topic or message being communicated, "
+                            "the tone (friendly, aggressive, informational, etc.), "
+                            "and any notable content. Be objective and factual.\n\n"
+                            f"Transcript: {transcript}"
+                        )
+                    }
+                ],
+                max_tokens=150,
+                temperature=0.2,
+            )
+            summary = completion.choices[0].message.content.strip()
+            return summary
+        except Exception as e:
+            logger.error(f"Transcript summarization failed: {str(e)}")
+            return None
+
+    def _transcribe(self, base64_data, mime_type):
+        """
+        Decode base64 audio, convert to WAV if necessary, then transcribe
+        via Google's free Speech Recognition API.
+        Returns transcript string or None on failure.
+        """
+        import base64, io, speech_recognition as sr
+
+        try:
+            raw_bytes = base64.b64decode(base64_data)
+        except Exception as e:
+            logger.error(f"Audio base64 decode failed: {e}")
+            return None
+
+        # Determine the format from mime_type
+        fmt = mime_type.split("/")[-1].split(";")[0].lower()  # e.g. "wav", "mpeg", "ogg"
+        if fmt == "mpeg":
+            fmt = "mp3"
+        elif fmt == "mp4":
+            fmt = "m4a"
+
+        # If not WAV, convert using pydub
+        wav_bytes_io = io.BytesIO()
+        if fmt != "wav":
+            try:
+                from pydub import AudioSegment
+                audio_seg = AudioSegment.from_file(io.BytesIO(raw_bytes), format=fmt)
+                audio_seg.export(wav_bytes_io, format="wav")
+                wav_bytes_io.seek(0)
+                logger.info(f"Audio converted from {fmt} to WAV for transcription")
+            except Exception as e:
+                logger.warning(f"pydub conversion failed ({fmt}): {e}. Trying raw bytes as WAV.")
+                wav_bytes_io = io.BytesIO(raw_bytes)
+        else:
+            wav_bytes_io = io.BytesIO(raw_bytes)
+
+        wav_bytes_io.seek(0)
+
+        # Transcribe with SpeechRecognition + Google
+        recognizer = sr.Recognizer()
+        try:
+            with sr.AudioFile(wav_bytes_io) as source:
+                audio = recognizer.record(source)
+            transcript = recognizer.recognize_google(audio)
+            return transcript
+        except sr.UnknownValueError:
+            logger.info("Google Speech Recognition: no speech detected")
+            return ""
+        except sr.RequestError as e:
+            logger.error(f"Google Speech Recognition request error: {e}")
+            return None
+        except Exception as e:
+            logger.error(f"Transcription failed: {e}")
+            return None
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # FUTURE PLUGIN TEMPLATES (uncomment and implement when needed)
 # ═══════════════════════════════════════════════════════════════════════════════
 
-# class AudioProcessingPlugin(ProcessingPlugin):
-#     """Process audio — transcription, moderation."""
-#     name = "audio_processing"
-#
-#     def get_input_schema(self):
-#         return {"audio_data": "bytes", "task": "str — 'transcribe' | 'moderate'"}
-#
-#     def get_output_schema(self):
-#         return {"text": "str", "status": "str"}
-#
-#     def process(self, input_data, context=None):
-#         pass
 
 # class DocumentProcessingPlugin(ProcessingPlugin):
 #     """Process documents — summarization, extraction."""

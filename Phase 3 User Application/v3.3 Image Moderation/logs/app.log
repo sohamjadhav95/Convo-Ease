@@ -443,3 +443,9 @@ The image displays a patterned, abstract bac
 [2026-02-21 20:48:26] [INFO] [message_store] Message saved: [PASS] sohamjadhav95 in group 273A57
 [2026-02-21 20:52:41] [WARNING] [user_store] Login failed: sohamjadhav719@gmail.com
 [2026-02-21 20:52:51] [INFO] [user_store] Login successful: sohamjadhav95
+[2026-02-21 20:55:12] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 20:55:12] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-21 20:55:12] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-21 20:55:12] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-21 20:55:12] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-21 20:55:12] [INFO] [main] ConvoEase application initialized successfully

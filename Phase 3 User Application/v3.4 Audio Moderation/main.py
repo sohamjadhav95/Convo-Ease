@@ -13,9 +13,9 @@ from flask_cors import CORS
 # Ensure project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from config import FRONTEND_DIR, SECRET_KEY, MODEL_CONFIG, VISION_MODEL_CONFIG, MEDIA_DIR, MEDIA_IMAGE_DIR, setup_logging
+from config import FRONTEND_DIR, SECRET_KEY, MODEL_CONFIG, VISION_MODEL_CONFIG, MEDIA_DIR, MEDIA_IMAGE_DIR, MEDIA_AUDIO_DIR, setup_logging
 from database.Database_processing import DBManager, UserStore, GroupStore, MessageStore
-from core_processing_engine import ProcessingEngine, TextModerationPlugin, ImageModerationPlugin
+from core_processing_engine import ProcessingEngine, TextModerationPlugin, ImageModerationPlugin, AudioModerationPlugin
 
 logger = setup_logging("main")
 
@@ -46,6 +46,12 @@ def create_app():
         engine.register_plugin(image_plugin)
     except Exception as e:
         logger.warning(f"ImageModerationPlugin not available: {e}")
+
+    try:
+        audio_plugin = AudioModerationPlugin(MODEL_CONFIG)
+        engine.register_plugin(audio_plugin)
+    except Exception as e:
+        logger.warning(f"AudioModerationPlugin not available: {e}")
 
     # ── Static / Frontend Routes ─────────────────────────────────────────
 
@@ -316,6 +322,100 @@ def create_app():
                 "status":  "FLAGGED",
                 "reason":  result["reason"],
                 "summary": summary_text
+            }), 200
+
+
+    # ══════════════════════════════════════════════════════════════════════
+    # AUDIO MESSAGES API
+    # ══════════════════════════════════════════════════════════════════════
+
+    @app.route("/api/groups/<group_id>/audio", methods=["POST"])
+    def api_send_audio(group_id):
+        """
+        Accept a base64-encoded audio file, transcribe via Google Speech
+        Recognition, then moderate the transcript against group rules.
+
+        Request body (JSON):
+            username   (str) — sender
+            audio_data (str) — base64-encoded audio bytes
+            mime_type  (str) — e.g. "audio/wav", "audio/mpeg" (default: audio/wav)
+
+        Response:
+            success, status ("PASS"/"FLAGGED"), reason, transcript, media_url
+        """
+        data       = request.get_json()
+        username   = data.get("username",   "").strip()
+        audio_data = data.get("audio_data", "").strip()
+        mime_type  = data.get("mime_type",  "audio/wav").strip()
+
+        if not all([username, audio_data]):
+            return jsonify({"success": False, "message": "Username and audio_data required."}), 400
+
+        group = GroupStore.get_group_details(group_id)
+        if not group:
+            return jsonify({"success": False, "message": "Group not found."}), 404
+
+        audio_plugin = engine.get_plugin("audio_moderation")
+        if not audio_plugin:
+            return jsonify({"success": False, "message": "Audio moderation not available."}), 503
+
+        rules = group.get("rules", "")
+
+        try:
+            result = engine.process("audio_moderation", {
+                "audio_data": audio_data,
+                "mime_type":  mime_type,
+                "rules":      rules,
+            })
+        except Exception as e:
+            logger.error(f"Audio moderation error: {e}")
+            return jsonify({"success": False, "message": f"Processing error: {str(e)}"}), 500
+
+        # Save audio file to disk so it persists and is playable from any client
+        ext = mime_type.split("/")[-1].split(";")[0]  # e.g. "wav", "mpeg", "ogg"
+        if ext == "mpeg": ext = "mp3"
+        import uuid as _uuid
+        filename  = f"{str(_uuid.uuid4())}.{ext}"
+        filepath  = os.path.join(MEDIA_AUDIO_DIR, filename)
+        media_url = f"/media/audio/{filename}"
+
+        try:
+            raw_bytes = base64.b64decode(audio_data)
+            with open(filepath, "wb") as f:
+                f.write(raw_bytes)
+            logger.info(f"Audio saved: {filepath} ({len(raw_bytes)} bytes)")
+        except Exception as e:
+            logger.error(f"Failed to save audio to disk: {e}")
+            return jsonify({"success": False, "message": "Failed to save audio."}), 500
+
+        summary_text = result.get("summary", "")
+        transcript   = result.get("transcript", "")
+        message_text = "[AUDIO]"
+
+        if result["allowed"]:
+            msg_id = MessageStore.save_message(
+                group_id, username, message_text, "PASS",
+                reason="", summary=summary_text, media_url=media_url
+            )
+            return jsonify({
+                "success":    True,
+                "status":     "PASS",
+                "message_id": msg_id,
+                "media_url":  media_url,
+                "summary":    summary_text,   # AI summary (shown as caption in chat)
+                "transcript": transcript      # Raw transcript for reference
+            }), 200
+        else:
+            MessageStore.save_message(
+                group_id, username, message_text, "FLAGGED",
+                reason=result["reason"], summary=summary_text, media_url=media_url
+            )
+            return jsonify({
+                "success":    False,
+                "status":     "FLAGGED",
+                "reason":     result["reason"],
+                "summary":    summary_text,
+                "transcript": transcript
             }), 200
 
 

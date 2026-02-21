@@ -204,8 +204,9 @@
 
                 <!-- Input Bar -->
                 <div class="chat-input-bar">
-                    <!-- Hidden file input for images -->
+                    <!-- Hidden file inputs -->
                     <input type="file" id="image-file-input" accept="image/*" style="display:none">
+                    <input type="file" id="audio-file-input" accept="audio/*" style="display:none">
                     <!-- Image attach button -->
                     <button class="btn-icon btn-attach" id="btn-attach-image" title="Send Image">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -213,6 +214,16 @@
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                             <circle cx="8.5" cy="8.5" r="1.5"></circle>
                             <polyline points="21 15 16 10 5 21"></polyline>
+                        </svg>
+                    </button>
+                    <!-- Audio attach button -->
+                    <button class="btn-icon btn-attach btn-attach-audio" id="btn-attach-audio" title="Send Audio">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                            <line x1="12" y1="19" x2="12" y2="23"></line>
+                            <line x1="8" y1="23" x2="16" y2="23"></line>
                         </svg>
                     </button>
                     <div class="input-wrapper">
@@ -288,7 +299,7 @@
                     <div class="settings-card">
                         <div class="setting-row">
                             <span class="setting-label">Version</span>
-                            <span class="setting-value">3.3</span>
+                            <span class="setting-value">3.4</span>
                         </div>
                         <div class="setting-row">
                             <span class="setting-label">Architecture</span>
@@ -365,7 +376,7 @@
     <div id="modal-admin" class="modal-overlay hidden">
         <div class="modal modal-large">
             <div class="modal-header">
-                <h3>Admin Panel</h3>
+                <h3 id="admin-panel-title">Admin Panel</h3>
                 <button class="btn-icon modal-close" data-modal="modal-admin">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -377,8 +388,8 @@
             <!-- Admin Tabs -->
             <div class="modal-tabs" style="margin: 0; padding: 12px 20px 0;">
                 <button class="modal-tab active" data-admin-tab="rules">Rules</button>
-                <button class="modal-tab" data-admin-tab="flagged">Flagged</button>
-                <button class="modal-tab" data-admin-tab="report">Report</button>
+                <button class="modal-tab" data-admin-tab="flagged" data-admin-only="true">Flagged</button>
+                <button class="modal-tab" data-admin-tab="report"  data-admin-only="true">Report</button>
             </div>
 
             <!-- Tab: Rules -->
@@ -431,6 +442,10 @@
                         <div class="report-stat-card accent">
                             <div class="stat-value" id="report-images">--</div>
                             <div class="stat-label">Images</div>
+                        </div>
+                        <div class="report-stat-card" style="border-color:var(--accent-light)">
+                            <div class="stat-value" id="report-audios" style="color:var(--accent-light)">--</div>
+                            <div class="stat-label">Audios</div>
                         </div>
                     </div>
 

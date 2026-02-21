@@ -1,5 +1,5 @@
 /**
- * ConvoEase — Frontend Application v3.3
+ * ConvoEase — Frontend Application v3.4
  * SPA routing, API client, state management, and DOM rendering.
  * Pure vanilla JavaScript — no frameworks.
  */
@@ -14,7 +14,8 @@ const State = {
     activeGroup: null,    // { group_id, group_name, admin_username, rules, ... }
     messages: [],         // [{ message_id, username, message, timestamp }, ...]
     pollTimer: null,
-    imageCache: {},       // { message_id: "data:<mime>;base64,..." } — session-only image cache
+    imageCache: {},       // { message_id: "/media/image/..." } — session-only cache
+    audioCache: {},       // { message_id: "/media/audio/..." } — session-only cache
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -69,6 +70,10 @@ const API = {
     // Images — sends base64, returns message_id + summary + moderation result
     sendImage: (group_id, username, image_data, mime_type) =>
         API.request('POST', `/api/groups/${group_id}/images`, { username, image_data, mime_type }),
+
+    // Audio — sends base64, returns message_id + transcript + moderation result
+    sendAudio: (group_id, username, audio_data, mime_type) =>
+        API.request('POST', `/api/groups/${group_id}/audio`, { username, audio_data, mime_type }),
 
     getFlagged: (group_id) =>
         API.request('GET', `/api/groups/${group_id}/messages/flagged`),
@@ -349,11 +354,11 @@ async function selectGroup(groupId) {
     headerAvatar.style.backgroundColor = getAvatarColor(group.group_name);
 
     const adminBtn = document.getElementById('btn-admin-panel');
-    if (State.user && group.admin_username === State.user.username) {
-        adminBtn.classList.remove('hidden');
-    } else {
-        adminBtn.classList.add('hidden');
-    }
+    // Show the panel button for ALL members (admin sees full panel, others see read-only Rules)
+    adminBtn.classList.remove('hidden');
+    // Update tooltip based on role
+    adminBtn.title = (State.user && group.admin_username === State.user.username)
+        ? 'Admin Panel' : 'Group Info';
 
     await loadMessages();
     startPolling();
@@ -391,19 +396,17 @@ function renderMessages() {
         const isMe = State.user && m.username === State.user.username;
         const senderHtml = isMe ? '' : `<div class="msg-sender">${escapeHtml(m.username)}</div>`;
 
-        // Detect image messages — stored as "[IMAGE]" or legacy "[IMAGE] <summary>"
+        // Detect image messages
         const isImage = m.message && (m.message === '[IMAGE]' || m.message.startsWith('[IMAGE]'));
+        // Detect audio messages
+        const isAudio = m.message && (m.message === '[AUDIO]' || m.message.startsWith('[AUDIO]'));
 
         let bubbleContent;
         if (isImage) {
             const inlineSummary = m.summary || m.message.replace(/^\[IMAGE\]\s*/, '');
-
-            // Priority: persisted server URL (works for all users, across page refreshes)
-            //           then session cache (shows immediately after sending before next poll)
             const imgSrc = (m.media_url && m.media_url.trim())
                 ? m.media_url
                 : (State.imageCache[m.message_id] || null);
-
             if (imgSrc) {
                 bubbleContent = `
                     <div class="msg-image-wrapper">
@@ -411,7 +414,6 @@ function renderMessages() {
                     </div>
                     ${inlineSummary ? `<div class="msg-image-caption">🤖 ${escapeHtml(inlineSummary)}</div>` : ''}`;
             } else {
-                // Fallback: image file somehow missing
                 bubbleContent = `
                     <div class="msg-image-indicator">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -423,12 +425,39 @@ function renderMessages() {
                     </div>
                     ${inlineSummary ? `<div class="msg-image-summary">${escapeHtml(inlineSummary)}</div>` : ''}`;
             }
+        } else if (isAudio) {
+            const transcript = m.summary || '';
+            // Priority: persisted server URL → session cache
+            const audioSrc = (m.media_url && m.media_url.trim())
+                ? m.media_url
+                : (State.audioCache[m.message_id] || null);
+            if (audioSrc) {
+                bubbleContent = `
+                    <div class="msg-audio-wrapper">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        </svg>
+                        <audio class="msg-audio-player" controls src="${audioSrc}" preload="metadata"></audio>
+                    </div>
+                    ${transcript ? `<div class="msg-audio-transcript">🎤 ${escapeHtml(transcript)}</div>` : ''}`;
+            } else {
+                bubbleContent = `
+                    <div class="msg-audio-indicator">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        </svg>
+                        <span>Audio</span>
+                    </div>
+                    ${transcript ? `<div class="msg-audio-transcript">🎤 ${escapeHtml(transcript)}</div>` : ''}`;
+            }
         } else {
             bubbleContent = escapeHtml(m.message);
         }
 
         return `
-            <div class="message-row ${isMe ? 'me' : 'other'}${isImage ? ' image-msg' : ''}">
+            <div class="message-row ${isMe ? 'me' : 'other'}${isImage ? ' image-msg' : ''}${isAudio ? ' audio-msg' : ''}">
                 ${senderHtml}
                 <div class="msg-bubble">
                     ${bubbleContent}
@@ -472,7 +501,43 @@ async function sendMessage() {
     }
 }
 
-// ── Image Upload ─────────────────────────────────────────────────────────────
+// ── Audio Upload ─────────────────────────────────────────────────────────────
+
+async function sendAudio(file) {
+    if (!file || !State.activeGroupId || !State.user) return;
+
+    const maxSize = 10 * 1024 * 1024; // 10 MB limit
+    if (file.size > maxSize) {
+        showToast('Audio too large. Max 10 MB.', 'error');
+        return;
+    }
+
+    showTypingIndicator();
+    showToast('Analyzing audio...', '');
+
+    try {
+        const base64 = await fileToBase64(file);
+        const mimeType = file.type || 'audio/wav';
+        const data = await API.sendAudio(State.activeGroupId, State.user.username, base64, mimeType);
+        removeTypingIndicator();
+
+        if (data.success && data.status === 'PASS') {
+            if (data.message_id && data.media_url) {
+                State.audioCache[data.message_id] = data.media_url;
+            }
+            showToast('Audio sent!', 'success');
+            await loadMessages();
+        } else if (data.status === 'FLAGGED') {
+            showFlagBanner(`Audio blocked: ${data.reason || 'Content violates group rules.'}`);
+            await loadMessages();
+        } else {
+            showToast(data.message || 'Failed to send audio.', 'error');
+        }
+    } catch (err) {
+        removeTypingIndicator();
+        showToast('Connection error.', 'error');
+    }
+}
 
 async function sendImage(file) {
     if (!file || !State.activeGroupId || !State.user) return;
@@ -708,7 +773,18 @@ function initModals() {
 async function openAdminPanel() {
     if (!State.activeGroup || !State.user) return;
 
-    // Reset to first tab
+    const isAdmin = State.activeGroup.admin_username === State.user.username;
+
+    // Set panel title based on role
+    const titleEl = document.getElementById('admin-panel-title');
+    if (titleEl) titleEl.textContent = isAdmin ? 'Admin Panel' : 'Group Info';
+
+    // Show/hide admin-only tabs
+    document.querySelectorAll('[data-admin-only="true"]').forEach(tab => {
+        tab.style.display = isAdmin ? '' : 'none';
+    });
+
+    // Reset to Rules tab
     document.querySelectorAll('[data-admin-tab]').forEach(t => t.classList.remove('active'));
     const firstTab = document.querySelector('[data-admin-tab="rules"]');
     if (firstTab) firstTab.classList.add('active');
@@ -728,28 +804,46 @@ async function openAdminPanel() {
         document.getElementById('admin-members').textContent = 'Error loading';
     }
 
-    // Rules
-    document.getElementById('admin-rules').value = State.activeGroup.rules || '';
+    // Rules — editable for admin, read-only for members
+    const rulesTextarea = document.getElementById('admin-rules');
+    rulesTextarea.value = State.activeGroup.rules || '';
+    rulesTextarea.readOnly = !isAdmin;
+    rulesTextarea.style.opacity = isAdmin ? '' : '0.7';
+    const saveRulesBtn = document.getElementById('btn-save-rules');
+    if (saveRulesBtn) saveRulesBtn.style.display = isAdmin ? '' : 'none';
 
-    // Flagged messages
-    try {
-        const flaggedData = await API.getFlagged(State.activeGroup.group_id);
-        const container = document.getElementById('flagged-list');
-        if (flaggedData.success && flaggedData.flagged.length > 0) {
-            container.innerHTML = flaggedData.flagged.map(f => `
-                <div class="flagged-item">
-                    <div class="flagged-item-header">
-                        <span>${escapeHtml(f.username)}</span>
-                        <span>${formatTime(f.timestamp)}</span>
-                    </div>
-                    <div class="flagged-item-message">${escapeHtml(f.message)}</div>
-                    <div class="flagged-item-reason">${escapeHtml(f.reason)}</div>
-                </div>`).join('');
-        } else {
-            container.innerHTML = '<p class="text-muted" style="padding:12px 0; font-size:13px;">Great! No flagged messages.</p>';
+    // Flagged messages (admin only)
+    if (isAdmin) {
+        try {
+            const flaggedData = await API.getFlagged(State.activeGroup.group_id);
+            const container = document.getElementById('flagged-list');
+            if (flaggedData.success && flaggedData.flagged.length > 0) {
+                container.innerHTML = flaggedData.flagged.map(f => {
+                    const isImg = f.message === '[IMAGE]';
+                    const isAud = f.message === '[AUDIO]';
+                    const typeBadge = isImg ? '📷 Image' : isAud ? '🎤 Audio' : '💬 Text';
+                    const displayMsg = isImg
+                        ? (f.summary || 'Image content')
+                        : isAud
+                            ? (f.summary || 'Audio content')
+                            : f.message;
+                    return `
+                    <div class="flagged-item">
+                        <div class="flagged-item-header">
+                            <span class="badge">${typeBadge}</span>
+                            <span>${escapeHtml(f.username)}</span>
+                            <span>${formatTime(f.timestamp)}</span>
+                        </div>
+                        <div class="flagged-item-message">${escapeHtml(displayMsg)}</div>
+                        <div class="flagged-item-reason">${escapeHtml(f.reason)}</div>
+                    </div>`;
+                }).join('');
+            } else {
+                container.innerHTML = '<p class="text-muted" style="padding:12px 0; font-size:13px;">Great! No flagged messages.</p>';
+            }
+        } catch (err) {
+            console.error('Failed to load flagged:', err);
         }
-    } catch (err) {
-        console.error('Failed to load flagged:', err);
     }
 
     openModal('modal-admin');
@@ -783,6 +877,8 @@ async function loadModerationReport(group_id) {
         document.getElementById('report-passed').textContent = r.pass_count;
         document.getElementById('report-flagged').textContent = r.flagged_count;
         document.getElementById('report-images').textContent = r.image_count;
+        const audioEl = document.getElementById('report-audios');
+        if (audioEl) audioEl.textContent = r.audio_count ?? 0;
         document.getElementById('report-pass-rate').textContent = `${r.pass_rate}%`;
         document.getElementById('report-flagged-rate').textContent = `${r.flagged_rate}%`;
 
@@ -824,8 +920,9 @@ async function loadModerationReport(group_id) {
 
         // ── Helper to build a message log item ──────────────────────────────
         function buildMsgItem(m, style) {
-            const badgeCls = m.type === 'image' ? 'badge-image' : 'badge-text';
-            const badgeTxt = m.type === 'image' ? '📷 Image' : '💬 Text';
+            const isAudio = m.type === 'audio';
+            const badgeCls = m.type === 'image' ? 'badge-image' : isAudio ? 'badge-audio' : 'badge-text';
+            const badgeTxt = m.type === 'image' ? '📷 Image' : isAudio ? '🎤 Audio' : '💬 Text';
             return `
                 <div class="report-msg-item ${style}">
                     <div class="report-msg-header">
@@ -899,7 +996,21 @@ function initEventBindings() {
         const file = e.target.files[0];
         if (file) {
             await sendImage(file);
-            e.target.value = ''; // reset so same file can be re-uploaded
+            e.target.value = '';
+        }
+    });
+
+    // Audio attach button → trigger file picker
+    document.getElementById('btn-attach-audio').addEventListener('click', () => {
+        document.getElementById('audio-file-input').click();
+    });
+
+    // File chosen → send audio
+    document.getElementById('audio-file-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            await sendAudio(file);
+            e.target.value = '';
         }
     });
 

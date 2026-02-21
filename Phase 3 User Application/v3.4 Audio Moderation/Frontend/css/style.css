@@ -1592,3 +1592,80 @@ textarea {
 .report-msg-reason.flagged {
     color: var(--danger);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   AUDIO MODERATION — v3.4
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Mic button — tinted purple to distinguish from image button */
+.btn-attach-audio {
+    border-color: rgba(139, 92, 246, 0.25);
+}
+
+.btn-attach-audio:hover {
+    background: rgba(139, 92, 246, 0.1);
+    border-color: rgba(139, 92, 246, 0.6);
+    color: #a78bfa;
+}
+
+/* Audio bubble: mic icon + HTML5 player side by side */
+.msg-audio-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+    min-width: 220px;
+}
+
+.msg-audio-player {
+    flex: 1;
+    height: 34px;
+    border-radius: var(--radius-sm);
+    outline: none;
+    min-width: 0;
+    max-width: 260px;
+}
+
+/* Transcript shown below audio player */
+.msg-audio-transcript {
+    font-size: 11px;
+    font-style: italic;
+    opacity: 0.75;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* Fallback when audio URL missing */
+.msg-audio-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.85;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Audio message row slightly wider */
+.message-row.audio-msg {
+    max-width: 70%;
+}
+
+/* Audio badge in report log */
+.badge-audio {
+    background: rgba(139, 92, 246, 0.15);
+    color: #a78bfa;
+}
+
+/* 5-column grid (adds Audios card) */
+.report-grid {
+    grid-template-columns: repeat(5, 1fr);
+}
+
+@media (max-width: 540px) {
+    .report-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
