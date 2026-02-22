@@ -1227,3 +1227,94 @@ Conversion failed!
 [2026-02-22 11:40:03] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
 [2026-02-22 11:40:03] [INFO] [processing_engine] Plugin registered: audio_moderation
 [2026-02-22 11:40:03] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 11:45:23] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 11:45:23] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:06:58] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:06:58] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:06:58] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:06:58] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:06:59] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:06:59] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:06:59] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 13:06:59] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 13:06:59] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 13:06:59] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 13:06:59] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:06:59] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:06:59] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 13:06:59] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 13:06:59] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 13:06:59] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 13:06:59] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 13:07:01] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:07:01] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:07:02] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:07:02] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 13:07:02] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 13:07:02] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:07:02] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 13:07:02] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 13:07:02] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 13:07:23] [INFO] [user_store] Login successful: sohamjadhav95
+[2026-02-22 13:59:30] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:30] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:59:30] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:30] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 13:59:30] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 13:59:30] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:31] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 13:59:31] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 13:59:31] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 13:59:34] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:34] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:59:34] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:34] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 13:59:34] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 13:59:35] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:35] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 13:59:35] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 13:59:35] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 13:59:42] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:42] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 13:59:42] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:42] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 13:59:42] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 13:59:43] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 13:59:43] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 13:59:43] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 13:59:43] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 14:02:09] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:02:09] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 14:02:09] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:02:09] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 14:02:09] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 14:02:09] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:02:10] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 14:02:10] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 14:02:10] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 14:02:19] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:02:19] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 14:02:20] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:02:20] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 14:02:20] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 14:02:20] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:02:20] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 14:02:20] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 14:02:20] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 14:04:38] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:04:38] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 14:04:39] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:04:39] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 14:04:39] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 14:04:39] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:04:40] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 14:04:40] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 14:04:40] [INFO] [main] ConvoEase application initialized successfully
+[2026-02-22 14:04:50] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:04:50] [INFO] [processing_engine] Plugin registered: text_moderation
+[2026-02-22 14:04:50] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:04:50] [INFO] [processing_engine] ImageModeration initialized | vision=google/gemma-3-27b-it:free | text=openai/gpt-oss-120b:free
+[2026-02-22 14:04:50] [INFO] [processing_engine] Plugin registered: image_moderation
+[2026-02-22 14:04:50] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
+[2026-02-22 14:04:50] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
+[2026-02-22 14:04:50] [INFO] [processing_engine] Plugin registered: audio_moderation

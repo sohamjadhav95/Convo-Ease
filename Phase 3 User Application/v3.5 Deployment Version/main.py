@@ -6,8 +6,10 @@ All orchestration logic, route definitions, and app configuration lives here.
 
 import os
 import sys
+import math
+import json
 import base64
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 
 # Ensure project root is on the path
@@ -19,6 +21,53 @@ from core_processing_engine import ProcessingEngine, TextModerationPlugin, Image
 
 logger = setup_logging("main")
 
+def sanitize_json(obj):
+    """
+    Recursively sanitize an object for safe JSON serialisation.
+    Handles:
+      - float NaN / Infinity  → None
+      - numpy scalar types (int64, float64, bool_, str_) → native Python
+      - dict / list           → recurse
+    This is required on Windows deployments where pandas to_dict() can emit
+    numpy scalars and NaN floats that json.dumps rejects by default.
+    """
+    # Handle numpy scalars if numpy is available
+    try:
+        import numpy as np
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        if isinstance(obj, (np.floating,)):
+            v = float(obj)
+            return None if (math.isnan(v) or math.isinf(v)) else v
+        if isinstance(obj, (np.integer,)):
+            return int(obj)
+        if isinstance(obj, (np.bool_,)):
+            return bool(obj)
+        if isinstance(obj, (np.str_,)):
+            return str(obj)
+        if isinstance(obj, np.ndarray):
+            return [sanitize_json(i) for i in obj.tolist()]
+    except ImportError:
+        # numpy not installed — fall through to plain float check
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+
+    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+        return None
+    if isinstance(obj, dict):
+        return {k: sanitize_json(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [sanitize_json(v) for v in obj]
+    return obj
+
+
+def safe_json(data, status=200):
+    """Serialise data to a Flask Response, sanitizing NaN / numpy types first."""
+    return Response(
+        json.dumps(sanitize_json(data)),
+        status=status,
+        mimetype="application/json"
+    )
 
 def create_app():
     """Application factory — creates and configures the Flask app."""
@@ -102,7 +151,7 @@ def create_app():
         success, user_data = UserStore.validate_login(username, password)
         if success:
             user_data.pop("password", None)
-            return jsonify({"success": True, "user": user_data}), 200
+            return safe_json({"success": True, "user": user_data})
         return jsonify({"success": False, "message": "Invalid credentials."}), 401
 
     # ══════════════════════════════════════════════════════════════════════
@@ -115,7 +164,7 @@ def create_app():
         if not username:
             return jsonify({"success": False, "message": "Username required."}), 400
         groups = GroupStore.get_user_groups(username)
-        return jsonify({"success": True, "groups": groups}), 200
+        return safe_json({"success": True, "groups": groups})
 
     @app.route("/api/groups", methods=["POST"])
     def api_create_group():
@@ -150,8 +199,8 @@ def create_app():
         details = GroupStore.get_group_details(group_id)
         if details:
             details.pop("password", None)
-            return jsonify({"success": True, "group": details}), 200
-        return jsonify({"success": False, "message": "Group not found."}), 404
+            return safe_json({"success": True, "group": details})
+        return safe_json({"success": False, "message": "Group not found."}, status=404)
 
     @app.route("/api/groups/<group_id>/rules", methods=["PUT"])
     def api_update_rules(group_id):
@@ -171,7 +220,7 @@ def create_app():
     @app.route("/api/groups/<group_id>/members", methods=["GET"])
     def api_group_members(group_id):
         members = GroupStore.get_group_members(group_id)
-        return jsonify({"success": True, "members": members}), 200
+        return safe_json({"success": True, "members": members})
 
     # ══════════════════════════════════════════════════════════════════════
     # MESSAGES API
@@ -180,12 +229,12 @@ def create_app():
     @app.route("/api/groups/<group_id>/messages", methods=["GET"])
     def api_get_messages(group_id):
         messages = MessageStore.get_visible_messages(group_id)
-        return jsonify({"success": True, "messages": messages}), 200
+        return safe_json({"success": True, "messages": messages})
 
     @app.route("/api/groups/<group_id>/messages/flagged", methods=["GET"])
     def api_get_flagged(group_id):
         flagged = MessageStore.get_flagged_messages(group_id)
-        return jsonify({"success": True, "flagged": flagged}), 200
+        return safe_json({"success": True, "flagged": flagged})
 
     @app.route("/api/groups/<group_id>/messages", methods=["POST"])
     def api_send_message(group_id):
@@ -302,27 +351,24 @@ def create_app():
                 group_id, username, message_text, "PASS",
                 reason="", summary=summary_text, media_url=media_url, group_rules=rules
             )
-            # NOTE: Do NOT rename the file — the preliminary UUID IS the permanent filename.
-            # Renaming after save_message() would break the URL already written to the CSV.
-            return jsonify({
+            return safe_json({
                 "success":    True,
                 "status":     "PASS",
                 "message_id": msg_id,
-                "media_url":  media_url,   # frontend can use this immediately as <img src>
+                "media_url":  media_url,
                 "summary":    summary_text
-            }), 200
+            })
         else:
-            # Still save the image for admin review even if flagged
             msg_id = MessageStore.save_message(
                 group_id, username, message_text, "FLAGGED",
                 reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
             )
-            return jsonify({
+            return safe_json({
                 "success": False,
                 "status":  "FLAGGED",
                 "reason":  result["reason"],
                 "summary": summary_text
-            }), 200
+            })
 
 
     # ══════════════════════════════════════════════════════════════════════
@@ -397,26 +443,26 @@ def create_app():
                 group_id, username, message_text, "PASS",
                 reason="", summary=summary_text, media_url=media_url, group_rules=rules
             )
-            return jsonify({
+            return safe_json({
                 "success":    True,
                 "status":     "PASS",
                 "message_id": msg_id,
                 "media_url":  media_url,
-                "summary":    summary_text,   # AI summary (shown as caption in chat)
-                "transcript": transcript      # Raw transcript for reference
-            }), 200
+                "summary":    summary_text,
+                "transcript": transcript
+            })
         else:
             MessageStore.save_message(
                 group_id, username, message_text, "FLAGGED",
                 reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
             )
-            return jsonify({
+            return safe_json({
                 "success":    False,
                 "status":     "FLAGGED",
                 "reason":     result["reason"],
                 "summary":    summary_text,
                 "transcript": transcript
-            }), 200
+            })
 
 
     # ══════════════════════════════════════════════════════════════════════
@@ -434,7 +480,7 @@ def create_app():
             return jsonify({"success": False, "message": "Group not found."}), 404
 
         report = MessageStore.get_moderation_report(group_id)
-        return jsonify({"success": True, "report": report}), 200
+        return safe_json({"success": True, "report": report})
 
     # ══════════════════════════════════════════════════════════════════════
     # SETTINGS API
@@ -462,8 +508,8 @@ def create_app():
         profile = UserStore.get_profile(username)
         if profile:
             profile.pop("password", None)
-            return jsonify({"success": True, "profile": profile}), 200
-        return jsonify({"success": False, "message": "User not found."}), 404
+            return safe_json({"success": True, "profile": profile})
+        return safe_json({"success": False, "message": "User not found."}, status=404)
 
     logger.info("ConvoEase application initialized successfully")
     return app
