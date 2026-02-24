@@ -1,0 +1,31 @@
+while making all the changes remember the core purpose and goal of project of the project.
+
+we have to make full architectural changes as guided as follows:
+
+Frontend directory:
+1. Change full UI to modern WhatsApp or telegram like interface with modern and professional industry grade application.
+2. Use Html, css, js and else as you want, just not use any advance framework like node js, react js, etc. just frontend connected with python to run on localhost.
+3. Make multi page Application, include main page as chat interface UI as explained in 1st point, then settings page where I can see all the settings.
+4. You have full autonomy to design fronted as best as possible aligning to satisfy purpose of application. 
+
+Database directory:
+This directory seems ok as it is, if want you can add more databases to make application run at best.
+
+Test directory:
+All application tests, verificaitons and results by agent or anything have to store here.
+
+Logs:
+Create logs folder if needed to debug and monitor application, as we have clean databases so I don't think its needed.
+
+core_processing_engine.py:
+Here you have to add all processing logic, Api deployments, Input and output, etc. So I can easily make changes and modify the code, in future I'll have to add multiple models there for different tasks like images, audio, documents. Currently we have just text facilities. Also I'll have to shift from api to local models with their local paths so this also a potential implementation in future.
+
+main.py:
+All excess logic that need to implement have to be here. You have this file to make as you want to run the application.
+
+run.py:
+this file will use to run the application on localhost.
+
+General Instructions:
+You have full autonomy to make changes in whole project as you want, just follow my guidelines for structure maintainability so I can easily interact with code and make changes further.
+Also reduce system dependencies in project, like system paths. The project have to be flexible as if deploy in other windows device or system as same folder just installing modules and libraries it have to run, no need to update paths and anything else.

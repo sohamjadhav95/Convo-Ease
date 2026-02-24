@@ -1,0 +1,27 @@
+# ConvoEase v3.5 — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# ── Web Framework ─────────────────────────────────────────────────────────────
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# ── Data Handling ─────────────────────────────────────────────────────────────
+pandas>=2.0.0
+
+# ── AI / LLM Client (OpenRouter) ─────────────────────────────────────────────
+openai>=1.30.0           # Used as the OpenRouter-compatible client
+
+# ── Audio Transcription ───────────────────────────────────────────────────────
+SpeechRecognition>=3.10.0    # Google Speech Recognition (free, no API key)
+pydub>=0.25.1                # Audio format conversion (mp3/ogg/webm → wav)
+
+# ── Audio Backend (pydub requires one of these) ───────────────────────────────
+# On Windows: install ffmpeg from https://ffmpeg.org/ and add to PATH
+# On Linux/macOS: sudo apt install ffmpeg  /  brew install ffmpeg
+# ffmpeg-python>=0.2.0    # Optional: Python bindings (not required if ffmpeg is on PATH)
+
+# ── Environment Variables ─────────────────────────────────────────────────────
+python-dotenv>=1.0.0     # Loads .env file for CONVOEASE_API_KEY (optional but recommended)
+
+# ── Standard Library (no install needed) ─────────────────────────────────────
+# uuid, os, sys, base64, io, datetime, logging — all built-in

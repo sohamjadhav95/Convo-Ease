@@ -1,0 +1,5 @@
+username,password,full_name,bio,profile_pic_color,created_at
+admin,8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918,System Admin,I am the root admin.,#FF5733,2024-01-01 10:00:00
+sohamjadhav95,fd9af9a9b787cabd69df73ec576d35a294973187ae78b397ea37dd3888517c2e,Soham Jadhav,nan,#82684f,2026-01-27 14:21:11
+aarvi01,5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5,Arvee Han,nan,#c0dc2e,2026-01-27 19:29:55
+testuser,13d249f2cb4127b40cfa757866850278793f814ded3c587fe5889e889a7a9f6c,Test User,,#221b48,2026-02-06 13:51:33

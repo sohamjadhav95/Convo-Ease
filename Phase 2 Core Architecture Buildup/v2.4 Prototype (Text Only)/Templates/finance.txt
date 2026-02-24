@@ -1,0 +1,5 @@
+"""Only financial and investment-related information is allowed.
+Personal financial advice and solicitation are not permitted.
+Be respectful and avoid sharing sensitive personal or account details.
+No advertisements, promotions, or offers for financial products.
+All discussions must comply with relevant financial regulations and standards."""

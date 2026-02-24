@@ -1,0 +1,5 @@
+"""Only healthcare, wellness, and medical information is allowed.
+Personal health advice and diagnosis are not permitted.
+Be respectful and maintain confidentiality of personal health information.
+No advertisements, promotions, or offers for medical products or services.
+All discussions must comply with healthcare regulations and standards."""

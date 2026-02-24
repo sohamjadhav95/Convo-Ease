@@ -1,0 +1,5 @@
+"""General information is allowed regarding class and college.
+               Personal messages are not allowed.
+               Only educational and learning-related messages are allowed.
+               Be respectful and kind.
+               Advertisements and promotions are strictly prohibited."""
