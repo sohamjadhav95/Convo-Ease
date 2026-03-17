@@ -1318,3 +1318,4 @@ Conversion failed!
 [2026-02-22 14:04:50] [INFO] [processing_engine] TextModeration initialized in API mode: openai/gpt-oss-120b:free
 [2026-02-22 14:04:50] [INFO] [processing_engine] AudioModerationPlugin initialized (Google SR + AI summarization)
 [2026-02-22 14:04:50] [INFO] [processing_engine] Plugin registered: audio_moderation
+[2026-02-22 14:04:50] [INFO] [main] ConvoEase application initialized successfully
