@@ -682,7 +682,7 @@ def create_app():
                 "transcript": transcript
             })
         else:
-            MessageStore.save_message(
+            msg_id = MessageStore.save_message(
                 group_id, username, message_text, "FLAGGED",
                 reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
             )
@@ -853,3 +853,6 @@ def create_app():
 
     logger.info("ConvoEase application initialized successfully")
     return app
+
+
+

@@ -111,7 +111,7 @@ Each modality can run independently in either:
 - `local` mode: load from `Models/Text`, `Models/Image`, `Models/Audio`
 - `api` mode: use hosted model IDs through the configured OpenAI-compatible endpoint
 
-Edit [config.py](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.6%20Enhance%20Deployment%20version/config.py):
+Edit [config.py](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/config.py):
 
 - `TEXT_MODEL_CONFIG`
 - `IMAGE_MODEL_CONFIG`
@@ -128,13 +128,13 @@ Important fields:
 
 ## Default Local Model Folders
 
-- [Models/Text](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.6%20Enhance%20Deployment%20version/Models/Text)
-- [Models/Image](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.6%20Enhance%20Deployment%20version/Models/Image)
-- [Models/Audio](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.6%20Enhance%20Deployment%20version/Models/Audio)
+- [Models/Text](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/Models/Text)
+- [Models/Image](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/Models/Image)
+- [Models/Audio](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/Models/Audio)
 
 ## Current Hosted Defaults
 
-Current hosted defaults in [config.py](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.6%20Enhance%20Deployment%20version/config.py):
+Current hosted defaults in [config.py](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/config.py):
 
 - Text moderation and text tasks: `openai/gpt-oss-120b`
 - Image moderation model: `meta-llama/llama-4-scout-17b-16e-instruct`
@@ -166,9 +166,26 @@ Open:
 
 - `http://localhost:5000`
 
+## Testing Architecture
+
+The project now keeps testing fully isolated under [testing](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/testing).
+
+- Layer 1: `pytest` API and backend coverage in [testing/pytest](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/testing/pytest)
+- Layer 2: Playwright browser scenarios in [testing/e2e](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/testing/e2e)
+- Layer 3: Locust load tests in [testing/stress](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/testing/stress)
+
+Quick start:
+
+```bash
+pytest testing/pytest -q
+pytest testing/e2e -q
+python testing/stress/run_mock_server.py
+locust -f testing/stress/locustfile.py --host http://127.0.0.1:5000
+```
+
 ## Notes
 
-- Local runtime dependencies for transformer-based inference remain optional in [requirements.txt](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.6%20Enhance%20Deployment%20version/requirements.txt).
+- Local runtime dependencies for transformer-based inference remain optional in [requirements.txt](/E:/Projects/Personal/Convo-Ease/Phase%203%20User%20Application/v3.7%20Major%20Featurs%20Addition/requirements.txt).
 - Existing CSV files are automatically schema-migrated on startup for new group and message fields.
 - The moderation engine treats admin rules as the primary decision boundary, while recent chat context is supporting reference.
 - Multilingual moderation uses language detection and translation as a compatibility layer; the original message remains visible in the UI.
