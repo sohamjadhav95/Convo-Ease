@@ -1,0 +1,22 @@
+# OS metadata
+Desktop.ini
+Thumbs.db
+.DS_Store
+
+# Python cache files
+__pycache__/
+*.py[cod]
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+
+# Local virtual environments
+.venv/
+venv/
+
+# Local env files
+.env
+
+# Log files
+*.log
