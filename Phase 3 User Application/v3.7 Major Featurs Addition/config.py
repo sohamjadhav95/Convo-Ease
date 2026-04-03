@@ -4,6 +4,7 @@ All paths, API settings, and logging are defined here.
 No hardcoded system paths - everything is relative to this file's location.
 """
 
+import json
 import os
 import logging
 from logging.handlers import RotatingFileHandler
@@ -94,32 +95,135 @@ os.makedirs(MEDIA_AUDIO_DIR, exist_ok=True)
 os.makedirs(MEDIA_VIDEO_DIR, exist_ok=True)
 
 LOG_LEVEL = getattr(logging, os.getenv("CONVOEASE_LOG_LEVEL", "INFO").upper(), logging.INFO)
+LOG_FILE_PATH = os.path.join(LOG_DIR, "app.log")
+LOG_JSON_FILE_PATH = os.path.join(LOG_DIR, "app.jsonl")
+
+DEFAULT_LOG_FIELDS = {
+    "category": "system",
+    "action": "general",
+    "request_id": "-",
+    "group_id": "-",
+    "message_id": "-",
+    "username": "-",
+    "status_code": "-",
+    "duration_ms": "-",
+    "error_code": "-",
+}
+
+
+class StructuredContextFilter(logging.Filter):
+    """Ensure every record has the same structured fields."""
+
+    def filter(self, record):
+        for key, default in DEFAULT_LOG_FIELDS.items():
+            if not hasattr(record, key):
+                setattr(record, key, default)
+        return True
+
+
+class StructuredTextFormatter(logging.Formatter):
+    """Readable log format with stable debugging fields."""
+
+    def format(self, record):
+        for key, default in DEFAULT_LOG_FIELDS.items():
+            if not hasattr(record, key):
+                setattr(record, key, default)
+        return super().format(record)
+
+
+class StructuredJsonFormatter(logging.Formatter):
+    """JSON line formatter for machine-readable diagnostics."""
+
+    def format(self, record):
+        payload = {
+            "timestamp": self.formatTime(record, self.datefmt),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        for key, default in DEFAULT_LOG_FIELDS.items():
+            payload[key] = getattr(record, key, default)
+
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+
+        return json.dumps(payload, ensure_ascii=True)
+
+
+def _clear_handlers(logger):
+    for handler in list(logger.handlers):
+        handler.close()
+        logger.removeHandler(handler)
+
+
+def _needs_reconfigure(logger):
+    expected_paths = {os.path.abspath(LOG_FILE_PATH), os.path.abspath(LOG_JSON_FILE_PATH)}
+    actual_paths = {
+        os.path.abspath(getattr(handler, "baseFilename", ""))
+        for handler in logger.handlers
+        if getattr(handler, "baseFilename", None)
+    }
+    return not logger.handlers or not expected_paths.issubset(actual_paths)
 
 
 def setup_logging(name="convoease"):
     """Configure and return a logger with console + file handlers."""
     logger = logging.getLogger(name)
     logger.setLevel(LOG_LEVEL)
+    logger.propagate = False
 
-    if logger.handlers:
+    if _needs_reconfigure(logger):
+        _clear_handlers(logger)
+    else:
         return logger
 
-    fmt = logging.Formatter(
-        "[%(asctime)s] [%(levelname)s] [%(name)s] %(message)s",
+    fmt = StructuredTextFormatter(
+        "[%(asctime)s] [%(levelname)s] [%(name)s] "
+        "[category=%(category)s action=%(action)s request_id=%(request_id)s "
+        "group_id=%(group_id)s message_id=%(message_id)s username=%(username)s "
+        "status=%(status_code)s duration_ms=%(duration_ms)s error_code=%(error_code)s] "
+        "%(message)s",
         datefmt="%Y-%m-%d %H:%M:%S"
     )
+    context_filter = StructuredContextFilter()
 
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(fmt)
+    console_handler.addFilter(context_filter)
     logger.addHandler(console_handler)
 
     file_handler = RotatingFileHandler(
-        os.path.join(LOG_DIR, "app.log"),
+        LOG_FILE_PATH,
         maxBytes=5 * 1024 * 1024,
         backupCount=3,
         encoding="utf-8"
     )
     file_handler.setFormatter(fmt)
+    file_handler.addFilter(context_filter)
     logger.addHandler(file_handler)
 
+    json_handler = RotatingFileHandler(
+        LOG_JSON_FILE_PATH,
+        maxBytes=5 * 1024 * 1024,
+        backupCount=5,
+        encoding="utf-8"
+    )
+    json_handler.setFormatter(StructuredJsonFormatter(datefmt="%Y-%m-%d %H:%M:%S"))
+    json_handler.addFilter(context_filter)
+    logger.addHandler(json_handler)
+
     return logger
+
+
+def log_event(logger, level, message, category="system", action="general", **context):
+    """Write a structured log event without changing existing logger usage."""
+    extra = {
+        "category": category,
+        "action": action,
+    }
+    for key in DEFAULT_LOG_FIELDS:
+        if key in {"category", "action"}:
+            continue
+        value = context.get(key, DEFAULT_LOG_FIELDS[key])
+        extra[key] = "-" if value in (None, "") else str(value)
+    logger.log(level, message, extra=extra)

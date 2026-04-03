@@ -881,13 +881,12 @@ async function loadSettings() {
         const data = await API.getSettings();
         if (data.success) {
             const s = data.settings;
-            const modeLabel = `${s.text?.backend || 'n/a'} / ${s.image?.backend || 'n/a'} / ${s.audio?.backend || 'n/a'}`;
-            document.getElementById('setting-mode').textContent = modeLabel.toUpperCase();
-            document.getElementById('setting-model').textContent = s.text?.api_model_id || s.text?.local_model_path || 'N/A';
-            document.getElementById('setting-url').textContent = s.base_url || 'N/A';
-            document.getElementById('setting-plugins').textContent = s.plugins.join(', ') || 'None';
+            document.getElementById('setting-mode').textContent = (s.system?.protection_status || 'Active').toUpperCase();
+            document.getElementById('setting-model').textContent = (s.system?.content_types || []).join(', ') || 'Standard chat protection';
+            document.getElementById('setting-url').textContent = `${s.system?.modules_active ?? 0} active`;
+            document.getElementById('setting-plugins').textContent = s.system?.privacy_mode || 'Internal details hidden';
             const vmEl = document.getElementById('setting-vision-model');
-            if (vmEl) vmEl.textContent = s.image?.api_model_id || s.image?.local_model_path || 'N/A';
+            if (vmEl) vmEl.textContent = 'Privacy-first moderation interface';
         }
     } catch (err) {
         console.error('Failed to load settings:', err);

@@ -1,3 +1,5 @@
+import json
+
 def test_report_counts_pass_flagged_and_media(client, create_group, join_group, media_payloads):
     group_id = create_group(admin_username="admin1", rules="No insults.")
     join_group(group_id, username="member1")
@@ -44,3 +46,28 @@ def test_rule_suggestions_use_mocked_ai_when_rules_exist(client):
     assert payload["success"] is True
     assert "No insults or harassment." in payload["revised_rules"]
     assert len(payload["suggestions"]) >= 2
+
+
+def test_settings_hide_internal_provider_details_and_emit_structured_logs(client, sandbox_paths):
+    response = client.get("/api/settings")
+
+    assert response.status_code == 200
+    payload = response.get_json()
+    assert payload["success"] is True
+    assert "system" in payload["settings"]
+    assert "base_url" not in payload["settings"]
+    assert "text" not in payload["settings"]
+    assert "image" not in payload["settings"]
+    assert "audio" not in payload["settings"]
+
+    log_file = sandbox_paths["logs_dir"] / "app.jsonl"
+    assert log_file.exists()
+
+    entries = [
+        json.loads(line)
+        for line in log_file.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert any(entry["category"] == "api" and entry["action"] == "request_completed" for entry in entries)
+    assert any(entry["category"] == "settings" and entry["action"] == "read" for entry in entries)
+    assert all("request_id" in entry for entry in entries)

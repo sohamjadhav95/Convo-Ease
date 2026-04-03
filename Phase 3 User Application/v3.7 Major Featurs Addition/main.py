@@ -9,7 +9,10 @@ import sys
 import math
 import json
 import base64
-from flask import Flask, request, jsonify, send_from_directory, Response
+import logging
+from time import perf_counter
+from uuid import uuid4
+from flask import Flask, request, jsonify, send_from_directory, Response, g
 from flask_cors import CORS
 
 # Ensure project root is on the path
@@ -24,6 +27,7 @@ from config import (
     MEDIA_DIR,
     MEDIA_IMAGE_DIR,
     MEDIA_AUDIO_DIR,
+    log_event,
     setup_logging,
 )
 from database.Database_processing import DBManager, UserStore, GroupStore, MessageStore
@@ -188,7 +192,10 @@ def safe_json(data, status=200):
     )
 
 def create_app():
-    """Application factory — creates and configures the Flask app."""
+    """Application factory for the Flask app."""
+    global logger
+    logger = setup_logging("main")
+
     app = Flask(
         __name__,
         static_folder=FRONTEND_DIR,
@@ -196,6 +203,38 @@ def create_app():
     )
     app.secret_key = SECRET_KEY
     CORS(app)
+
+    @app.before_request
+    def _start_request_logging():
+        g.request_id = uuid4().hex[:12]
+        g.request_started_at = perf_counter()
+        log_event(
+            logger,
+            logging.INFO,
+            f"{request.method} {request.path}",
+            category="api",
+            action="request_started",
+            request_id=g.request_id,
+            username=request.args.get("username", ""),
+        )
+
+    @app.after_request
+    def _finish_request_logging(response):
+        started_at = getattr(g, "request_started_at", None)
+        duration_ms = int((perf_counter() - started_at) * 1000) if started_at else "-"
+        log_event(
+            logger,
+            logging.INFO,
+            f"{request.method} {request.path}",
+            category="api",
+            action="request_completed",
+            request_id=getattr(g, "request_id", "-"),
+            username=request.args.get("username", ""),
+            status_code=response.status_code,
+            duration_ms=duration_ms,
+        )
+        response.headers["X-Request-ID"] = getattr(g, "request_id", "-")
+        return response
 
     # ── Initialize Database ──────────────────────────────────────────────
     DBManager.initialize()
@@ -265,6 +304,16 @@ def create_app():
 
         success, message = UserStore.register(username, password, full_name, bio)
         status = 200 if success else 409
+        log_event(
+            logger,
+            logging.INFO if success else logging.WARNING,
+            "User registration processed",
+            category="auth",
+            action="register",
+            username=username,
+            status_code=status,
+            request_id=getattr(g, "request_id", "-"),
+        )
         return jsonify({"success": success, "message": message}), status
 
     @app.route("/api/auth/login", methods=["POST"])
@@ -279,7 +328,28 @@ def create_app():
         success, user_data = UserStore.validate_login(username, password)
         if success:
             user_data.pop("password", None)
+            log_event(
+                logger,
+                logging.INFO,
+                "User login succeeded",
+                category="auth",
+                action="login_success",
+                username=username,
+                status_code=200,
+                request_id=getattr(g, "request_id", "-"),
+            )
             return safe_json({"success": True, "user": user_data})
+        log_event(
+            logger,
+            logging.WARNING,
+            "User login failed",
+            category="auth",
+            action="login_failed",
+            username=username,
+            status_code=401,
+            request_id=getattr(g, "request_id", "-"),
+            error_code="invalid_credentials",
+        )
         return jsonify({"success": False, "message": "Invalid credentials."}), 401
 
     # ══════════════════════════════════════════════════════════════════════
@@ -307,6 +377,17 @@ def create_app():
             return jsonify({"success": False, "message": "Group name and admin required."}), 400
 
         success, group_id = GroupStore.create_group(name, password, admin, rules, moderation_sensitivity)
+        log_event(
+            logger,
+            logging.INFO,
+            "Group created",
+            category="group",
+            action="create",
+            request_id=getattr(g, "request_id", "-"),
+            group_id=group_id,
+            username=admin,
+            status_code=200,
+        )
         return jsonify({"success": success, "group_id": group_id}), 200
 
     @app.route("/api/groups/join", methods=["POST"])
@@ -321,6 +402,18 @@ def create_app():
 
         success, message = GroupStore.join_group(group_id, password, username)
         status = 200 if success else 400
+        log_event(
+            logger,
+            logging.INFO if success else logging.WARNING,
+            "Group join processed",
+            category="group",
+            action="join",
+            request_id=getattr(g, "request_id", "-"),
+            group_id=group_id,
+            username=username,
+            status_code=status,
+            error_code="" if success else "join_failed",
+        )
         return jsonify({"success": success, "message": message}), status
 
     @app.route("/api/groups/<group_id>", methods=["GET"])
@@ -394,7 +487,17 @@ def create_app():
                     "moderation_sensitivity": moderation_sensitivity,
                 })
             except Exception as e:
-                logger.error(f"Moderation failed: {e}")
+                log_event(
+                    logger,
+                    logging.ERROR,
+                    "Text moderation failed",
+                    category="moderation.text",
+                    action="process_error",
+                    request_id=getattr(g, "request_id", "-"),
+                    group_id=group_id,
+                    username=username,
+                    error_code="moderation_error",
+                )
                 moderation_result = {"allowed": False, "reason": f"Moderation error: {str(e)}"}
 
         if moderation_result["allowed"]:
@@ -410,6 +513,18 @@ def create_app():
                 language_confidence=moderation_result.get("language_confidence", ""),
                 translated_message=moderation_result.get("translated_message", ""),
             )
+            log_event(
+                logger,
+                logging.INFO,
+                "Text message accepted",
+                category="moderation.text",
+                action="pass",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                message_id=msg_id,
+                username=username,
+                status_code=200,
+            )
             return jsonify({"success": True, "status": "PASS", "message_id": msg_id}), 200
         else:
             msg_id = MessageStore.save_message(
@@ -424,6 +539,19 @@ def create_app():
                 detected_language=moderation_result.get("detected_language", ""),
                 language_confidence=moderation_result.get("language_confidence", ""),
                 translated_message=moderation_result.get("translated_message", ""),
+            )
+            log_event(
+                logger,
+                logging.WARNING,
+                "Text message flagged",
+                category="moderation.text",
+                action="flagged",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                message_id=msg_id,
+                username=username,
+                status_code=200,
+                error_code="policy_flag",
             )
             return jsonify({
                 "success": False,
@@ -543,7 +671,17 @@ def create_app():
                 "moderation_sensitivity": moderation_sensitivity,
             })
         except Exception as e:
-            logger.error(f"Image moderation error: {e}")
+            log_event(
+                logger,
+                logging.ERROR,
+                "Image moderation failed",
+                category="moderation.image",
+                action="process_error",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                username=username,
+                error_code="moderation_error",
+            )
             return jsonify({"success": False, "message": f"Processing error: {str(e)}"}), 500
 
         # Decode base64 and save image to disk so it persists across restarts
@@ -560,9 +698,28 @@ def create_app():
             raw_bytes = base64.b64decode(image_data)
             with open(filepath, "wb") as f:
                 f.write(raw_bytes)
-            logger.info(f"Image saved: {filepath} ({len(raw_bytes)} bytes)")
+            log_event(
+                logger,
+                logging.INFO,
+                "Image stored on disk",
+                category="media.image",
+                action="saved",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                username=username,
+            )
         except Exception as e:
-            logger.error(f"Failed to save image to disk: {e}")
+            log_event(
+                logger,
+                logging.ERROR,
+                "Image persistence failed",
+                category="media.image",
+                action="save_failed",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                username=username,
+                error_code="storage_error",
+            )
             return jsonify({"success": False, "message": "Failed to save image."}), 500
 
         # URL the frontend uses: stored in CSV so it works for all users + after page reload
@@ -575,6 +732,18 @@ def create_app():
                 group_id, username, message_text, "PASS",
                 reason="", summary=summary_text, media_url=media_url, group_rules=rules
             )
+            log_event(
+                logger,
+                logging.INFO,
+                "Image accepted",
+                category="moderation.image",
+                action="pass",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                message_id=msg_id,
+                username=username,
+                status_code=200,
+            )
             return safe_json({
                 "success":    True,
                 "status":     "PASS",
@@ -586,6 +755,19 @@ def create_app():
             msg_id = MessageStore.save_message(
                 group_id, username, message_text, "FLAGGED",
                 reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
+            )
+            log_event(
+                logger,
+                logging.WARNING,
+                "Image flagged",
+                category="moderation.image",
+                action="flagged",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                message_id=msg_id,
+                username=username,
+                status_code=200,
+                error_code="policy_flag",
             )
             return safe_json({
                 "success": False,
@@ -644,7 +826,17 @@ def create_app():
                 "moderation_sensitivity": moderation_sensitivity,
             })
         except Exception as e:
-            logger.error(f"Audio moderation error: {e}")
+            log_event(
+                logger,
+                logging.ERROR,
+                "Audio moderation failed",
+                category="moderation.audio",
+                action="process_error",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                username=username,
+                error_code="moderation_error",
+            )
             return jsonify({"success": False, "message": f"Processing error: {str(e)}"}), 500
 
         # Save audio file to disk so it persists and is playable from any client
@@ -659,9 +851,28 @@ def create_app():
             raw_bytes = base64.b64decode(audio_data)
             with open(filepath, "wb") as f:
                 f.write(raw_bytes)
-            logger.info(f"Audio saved: {filepath} ({len(raw_bytes)} bytes)")
+            log_event(
+                logger,
+                logging.INFO,
+                "Audio stored on disk",
+                category="media.audio",
+                action="saved",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                username=username,
+            )
         except Exception as e:
-            logger.error(f"Failed to save audio to disk: {e}")
+            log_event(
+                logger,
+                logging.ERROR,
+                "Audio persistence failed",
+                category="media.audio",
+                action="save_failed",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                username=username,
+                error_code="storage_error",
+            )
             return jsonify({"success": False, "message": "Failed to save audio."}), 500
 
         summary_text = result.get("summary", "")
@@ -672,6 +883,18 @@ def create_app():
             msg_id = MessageStore.save_message(
                 group_id, username, message_text, "PASS",
                 reason="", summary=summary_text, media_url=media_url, group_rules=rules
+            )
+            log_event(
+                logger,
+                logging.INFO,
+                "Audio accepted",
+                category="moderation.audio",
+                action="pass",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                message_id=msg_id,
+                username=username,
+                status_code=200,
             )
             return safe_json({
                 "success":    True,
@@ -685,6 +908,19 @@ def create_app():
             msg_id = MessageStore.save_message(
                 group_id, username, message_text, "FLAGGED",
                 reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
+            )
+            log_event(
+                logger,
+                logging.WARNING,
+                "Audio flagged",
+                category="moderation.audio",
+                action="flagged",
+                request_id=getattr(g, "request_id", "-"),
+                group_id=group_id,
+                message_id=msg_id,
+                username=username,
+                status_code=200,
+                error_code="policy_flag",
             )
             return safe_json({
                 "success":    False,
@@ -815,29 +1051,25 @@ def create_app():
 
     @app.route("/api/settings", methods=["GET"])
     def api_get_settings():
-        """Return current engine configuration (safe view)."""
+        """Return user-safe system settings without internal provider details."""
+        plugins = engine.list_plugins()
         safe_config = {
-            "text": {
-                "backend": TEXT_MODEL_CONFIG.get("backend", ""),
-                "api_model_id": TEXT_MODEL_CONFIG.get("api_model_id", ""),
-                "local_model_path": TEXT_MODEL_CONFIG.get("local_model_path", ""),
-                "local_model_type": TEXT_MODEL_CONFIG.get("local_model_type", ""),
+            "system": {
+                "protection_status": "Active" if plugins else "Limited",
+                "content_types": ["Text", "Images", "Audio"],
+                "modules_active": len(plugins),
+                "privacy_mode": "Internal provider details hidden",
             },
-            "image": {
-                "backend": IMAGE_MODEL_CONFIG.get("backend", ""),
-                "api_model_id": IMAGE_MODEL_CONFIG.get("api_model_id", ""),
-                "local_model_path": IMAGE_MODEL_CONFIG.get("local_model_path", ""),
-                "local_model_type": IMAGE_MODEL_CONFIG.get("local_model_type", ""),
-            },
-            "audio": {
-                "backend": AUDIO_MODEL_CONFIG.get("backend", ""),
-                "api_model_id": AUDIO_MODEL_CONFIG.get("api_model_id", ""),
-                "local_model_path": AUDIO_MODEL_CONFIG.get("local_model_path", ""),
-                "local_model_type": AUDIO_MODEL_CONFIG.get("local_model_type", ""),
-            },
-            "base_url": TEXT_MODEL_CONFIG.get("base_url", ""),
-            "plugins": engine.list_plugins()
         }
+        log_event(
+            logger,
+            logging.INFO,
+            "Settings viewed",
+            category="settings",
+            action="read",
+            request_id=getattr(g, "request_id", "-"),
+            status_code=200,
+        )
         return jsonify({"success": True, "settings": safe_config}), 200
 
     @app.route("/api/user/profile", methods=["GET"])

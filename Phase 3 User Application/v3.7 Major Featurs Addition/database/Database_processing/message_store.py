@@ -4,10 +4,11 @@ All message-related database operations: save, load, flagged, summaries, analyti
 """
 
 import uuid
+import logging
 from collections import Counter, defaultdict
 from datetime import datetime
 
-from config import CHATS_FILE, setup_logging
+from config import CHATS_FILE, log_event, setup_logging
 from .db_manager import DBManager
 
 logger = setup_logging("message_store")
@@ -79,7 +80,16 @@ class MessageStore:
             "appeal_admin_note": appeal_admin_note,
         }
         DBManager.append_row(CHATS_FILE, new_msg)
-        logger.info("Message saved: [%s] %s in group %s", status, username, group_id)
+        log_event(
+            logger,
+            logging.INFO,
+            f"Message stored with status {status}",
+            category="database.message",
+            action="save",
+            group_id=group_id,
+            message_id=new_msg["message_id"],
+            username=username,
+        )
         return new_msg["message_id"]
 
     @staticmethod
@@ -247,6 +257,16 @@ class MessageStore:
         msgs.loc[mask, "appeal_reviewed_at"] = ""
         msgs.loc[mask, "appeal_admin_note"] = ""
         DBManager.write_csv(CHATS_FILE, msgs)
+        log_event(
+            logger,
+            logging.INFO,
+            "Appeal submitted",
+            category="appeal",
+            action="submit",
+            group_id=group_id,
+            message_id=message_id,
+            status_code=200,
+        )
         return True
 
     @staticmethod
@@ -271,6 +291,17 @@ class MessageStore:
             msgs.loc[mask, "reason"] = admin_note or ai_reason or str(msgs.loc[mask, "initial_reason"].iloc[0] or "")
 
         DBManager.write_csv(CHATS_FILE, msgs)
+        log_event(
+            logger,
+            logging.INFO,
+            f"Appeal {review_status.lower()}",
+            category="appeal",
+            action="resolve",
+            group_id=group_id,
+            message_id=message_id,
+            username=admin_username,
+            status_code=200,
+        )
         return True
 
     @staticmethod
