@@ -2168,3 +2168,10 @@ body,
     font-weight: 700;
     color: var(--accent-light);
 }
+
+
+/* Fix for scrollable modal form */
+.modal-form {
+    max-height: 60vh;
+    overflow-y: auto;
+}

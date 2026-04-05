@@ -43,7 +43,7 @@ _API_BASE_URL = os.getenv(
     os.getenv("CONVOEASE_API_URL", "https://api.groq.com/openai/v1")
 )
 
-GLOBAL_MODEL_MODE = os.getenv("CONVOEASE_MODEL_MODE", "local") # Can be "api" or "local", overridden by specific model configs below.
+GLOBAL_MODEL_MODE = os.getenv("CONVOEASE_MODEL_MODE", "api") # Can be "api" or "local", overridden by specific model configs below.
 
 TEXT_MODEL_CONFIG = {
     "backend": os.getenv("CONVOEASE_TEXT_BACKEND", GLOBAL_MODEL_MODE),

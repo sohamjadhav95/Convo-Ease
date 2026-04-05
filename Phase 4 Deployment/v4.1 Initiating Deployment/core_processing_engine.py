@@ -118,7 +118,7 @@ class TextModerationPlugin(ProcessingPlugin):
             user_prompt = self._build_prompt(
                 message, rules, recent_messages, moderation_sensitivity, language_meta
             )
-            content = self.generate_text(system_prompt, user_prompt, max_new_tokens=48)
+            content = self.generate_text(system_prompt, user_prompt, max_new_tokens=512)
             result = self._parse_response(content)
         except Exception as exc:
             logger.error("Moderation error: %s", exc)
@@ -224,6 +224,9 @@ ENGLISH MESSAGE REFERENCE: "{translated_message or message}"
         if content.startswith("FLAGGED"):
             reason = content.replace("FLAGGED", "", 1).strip().lstrip(":- ")
             return {"allowed": False, "reason": reason or "Flagged by moderation model."}
+
+        if not content.strip():
+            return {"allowed": False, "reason": "Moderation empty response (token limit reached?)."}
 
         lower = content.lower()
         if any(keyword in lower for keyword in ["flagged", "violation", "not allowed"]):
@@ -504,7 +507,7 @@ class AudioModerationPlugin(ProcessingPlugin):
             return self._summary_moderator.generate_text(
                 "Summarize audio transcripts concisely and objectively.",
                 f"Summarize this audio transcript in 1-2 sentences:\n\n{transcript}",
-                max_new_tokens=96,
+                max_new_tokens=256,
                 temperature=0.2,
             )
         except Exception as exc:
