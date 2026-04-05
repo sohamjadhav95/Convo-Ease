@@ -14,8 +14,8 @@ langdetect>=1.0.9
 deep-translator>=1.11.4
 
 # Audio transcription helpers
-SpeechRecognition>=3.10.0
-pydub>=0.25.1
+openai-whisper
+imageio-ffmpeg
 
 # Environment variables
 python-dotenv>=1.0.0
@@ -30,11 +30,10 @@ locust>=2.31.0
 # Install these only if you want to run local Text / Image / Audio models.
 # torch
 # transformers>=4.45.0
+# protobuf>=5.0.0
 # pillow>=10.0.0
-# soundfile>=0.12.1
 # numpy>=1.26.0
 
 # Notes
-# - pydub requires ffmpeg to be installed and available on PATH.
 # - Standard library modules such as uuid, os, sys, base64, io, datetime,
 #   and logging do not need separate installation.

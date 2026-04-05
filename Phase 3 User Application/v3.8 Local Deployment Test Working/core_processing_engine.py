@@ -11,11 +11,12 @@ Design principles:
 import io
 import math
 import base64
+import logging
 from abc import ABC, abstractmethod
 
-from backend_factory import get_text_backend
+from backend_factory import get_audio_backend, get_image_backend, get_text_backend
 
-from config import setup_logging
+from config import log_event, setup_logging
 
 logger = setup_logging("processing_engine")
 
@@ -46,6 +47,15 @@ def _ensure_dir_has_files(path):
     return False
 
 
+def _release_backend_instance(backend):
+    release = getattr(backend, "release", None)
+    if callable(release):
+        try:
+            release()
+        except Exception as exc:
+            logger.warning("Backend release failed: %s", exc)
+
+
 class ProcessingPlugin(ABC):
     """Base class for all processing plugins."""
 
@@ -71,8 +81,8 @@ class TextModerationPlugin(ProcessingPlugin):
 
     def __init__(self, model_config):
         self.config = model_config
+        self.backend = model_config.get("backend", "api")
         self._backend = get_text_backend(model_config)
-        self._generator = self._backend
 
     def get_input_schema(self):
         return {
@@ -108,11 +118,15 @@ class TextModerationPlugin(ProcessingPlugin):
             user_prompt = self._build_prompt(
                 message, rules, recent_messages, moderation_sensitivity, language_meta
             )
-            content = self.generate_text(system_prompt, user_prompt, max_new_tokens=96)
+            content = self.generate_text(system_prompt, user_prompt, max_new_tokens=48)
             result = self._parse_response(content)
         except Exception as exc:
             logger.error("Moderation error: %s", exc)
-            result = {"allowed": False, "reason": f"Moderation error: {exc}"}
+            result = {
+                "allowed": False,
+                "reason": "Moderation temporarily unavailable.",
+                "system_error": True,
+            }
 
         result.update({
             "detected_language": language_meta["detected_language"],
@@ -319,75 +333,12 @@ class ImageModerationPlugin(ProcessingPlugin):
 
     name = "image_moderation"
 
-    def __init__(self, text_model_config, vision_model_config):
+    def __init__(self, text_model_config, vision_model_config, text_moderator=None):
         self.text_config = text_model_config
         self.vision_config = vision_model_config
         self.backend = vision_model_config.get("backend", "api")
-
-        self._vision_client = None
-        self._vision_pipeline = None
-        self._text_moderator = TextModerationPlugin(text_model_config)
-
-        self._initialize()
-
-    def _initialize(self):
-        if self.backend == "api":
-            from openai import OpenAI
-
-            self._vision_client = OpenAI(
-                base_url=self.vision_config["base_url"],
-                api_key=self.vision_config["api_key"]
-            )
-            logger.info(
-                "ImageModeration initialized in API mode: %s",
-                self.vision_config.get("api_model_id", "")
-            )
-        elif self.backend == "local":
-            self._vision_pipeline = self._build_local_vision_pipeline()
-            logger.info(
-                "ImageModeration initialized in LOCAL mode: %s",
-                self.vision_config.get("local_model_path", "")
-            )
-        else:
-            raise ValueError(f"Unsupported image backend: {self.backend}")
-
-    def _build_local_vision_pipeline(self):
-        model_path = self.vision_config.get("local_model_path", "")
-        if not _ensure_dir_has_files(model_path):
-            raise FileNotFoundError(
-                f"Image local model directory is empty or missing: {model_path}"
-            )
-
-        try:
-            import torch
-            from transformers import pipeline
-        except ImportError as exc:
-            raise ImportError(
-                "Local image backend requires 'transformers' and 'torch'."
-            ) from exc
-
-        model_kwargs = {}
-        if torch.cuda.is_available():
-            model_kwargs["torch_dtype"] = torch.float16
-        else:
-            model_kwargs["torch_dtype"] = torch.float32
-
-        try:
-            return pipeline(
-                "image-text-to-text",
-                model=model_path,
-                device_map="auto",
-                local_files_only=True,
-                model_kwargs=model_kwargs,
-            )
-        except Exception:
-            return pipeline(
-                "image-to-text",
-                model=model_path,
-                device_map="auto",
-                local_files_only=True,
-                model_kwargs=model_kwargs,
-            )
+        self._vision_backend = get_image_backend(vision_model_config)
+        self._text_moderator = text_moderator or TextModerationPlugin(text_model_config)
 
     def get_input_schema(self):
         return {
@@ -419,8 +370,9 @@ class ImageModerationPlugin(ProcessingPlugin):
         if summary is None:
             return {
                 "allowed": False,
-                "reason": "Image could not be analyzed. Upload blocked for safety.",
-                "summary": ""
+                "reason": "Image moderation is temporarily unavailable.",
+                "summary": "",
+                "system_error": True,
             }
 
         if not rules:
@@ -437,67 +389,23 @@ class ImageModerationPlugin(ProcessingPlugin):
         return {
             "allowed": moderation["allowed"],
             "reason": moderation["reason"],
-            "summary": summary
+            "summary": summary,
+            "system_error": moderation.get("system_error", False),
         }
 
     def _summarize_image(self, base64_data, mime_type):
-        if self.backend == "api":
-            return self._summarize_image_api(base64_data, mime_type)
-        return self._summarize_image_local(base64_data)
-
-    def _summarize_image_api(self, base64_data, mime_type):
         try:
-            completion = self._vision_client.chat.completions.create(
-                model=self.vision_config["api_model_id"],
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "Describe this image in 1-3 concise sentences. "
-                                    "Be objective and focus on visible content."
-                                )
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_data}"
-                                }
-                            }
-                        ]
-                    }
-                ]
-            )
-            return (completion.choices[0].message.content or "").strip()
+            # On 4 GB GPUs the local text and image Gemma runtimes cannot stay
+            # resident together. Release the text backend before loading the
+            # multimodal model, then release the image backend after use so text
+            # moderation can reload for the summary decision.
+            _release_backend_instance(getattr(self._text_moderator, "_backend", None))
+            return self._vision_backend.describe(base64_data, mime_type)
         except Exception as exc:
             logger.error("Image summarization failed: %s", exc)
             return None
-
-    def _summarize_image_local(self, base64_data):
-        try:
-            from PIL import Image
-        except ImportError as exc:
-            raise ImportError("Local image backend requires Pillow.") from exc
-
-        try:
-            image_bytes = base64.b64decode(base64_data)
-            image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-            prompt = "Describe this image briefly and objectively."
-            output = self._vision_pipeline(image, prompt=prompt, max_new_tokens=96)
-            first = output[0]
-            if isinstance(first, dict):
-                return (
-                    first.get("generated_text")
-                    or first.get("caption")
-                    or first.get("text")
-                    or ""
-                ).strip()
-            return str(first).strip()
-        except Exception as exc:
-            logger.error("Local image summarization failed: %s", exc)
-            return None
+        finally:
+            _release_backend_instance(self._vision_backend)
 
 
 class AudioModerationPlugin(ProcessingPlugin):
@@ -510,65 +418,22 @@ class AudioModerationPlugin(ProcessingPlugin):
 
     name = "audio_moderation"
 
-    def __init__(self, text_model_config, audio_model_config):
+    def __init__(self, text_model_config, audio_model_config, text_moderator=None):
         self.text_config = text_model_config
         self.audio_config = audio_model_config
         self.backend = audio_model_config.get("backend", "api")
-
-        self._text_moderator = TextModerationPlugin(text_model_config)
-        self._summary_client = None
-        self._audio_client = None
-        self._asr_pipeline = None
-
-        self._initialize()
-
-    def _initialize(self):
-        if self.backend == "api":
-            from openai import OpenAI
-
-            self._summary_client = OpenAI(
-                api_key=self.text_config["api_key"],
-                base_url=self.text_config["base_url"],
-            )
-            self._audio_client = OpenAI(
-                api_key=self.audio_config["api_key"],
-                base_url=self.audio_config["base_url"],
-            )
-            logger.info(
-                "AudioModeration initialized in API mode: audio=%s summary=%s",
-                self.audio_config.get("api_model_id", ""),
-                self.audio_config.get("api_summary_model_id", self.text_config.get("api_model_id", ""))
-            )
-        elif self.backend == "local":
-            self._asr_pipeline = self._build_local_asr_pipeline()
-            logger.info(
-                "AudioModeration initialized in LOCAL mode: %s",
-                self.audio_config.get("local_model_path", "")
-            )
-        else:
-            raise ValueError(f"Unsupported audio backend: {self.backend}")
-
-    def _build_local_asr_pipeline(self):
-        model_path = self.audio_config.get("local_model_path", "")
-        if not _ensure_dir_has_files(model_path):
-            raise FileNotFoundError(
-                f"Audio local model directory is empty or missing: {model_path}"
-            )
-
-        try:
-            import torch
-            from transformers import pipeline
-        except ImportError as exc:
-            raise ImportError(
-                "Local audio backend requires 'transformers' and 'torch'."
-            ) from exc
-
-        return pipeline(
-            "automatic-speech-recognition",
-            model=model_path,
-            device_map="auto" if torch.cuda.is_available() else None,
-            local_files_only=True,
-        )
+        self._audio_backend = get_audio_backend(audio_model_config)
+        self._text_moderator = text_moderator or TextModerationPlugin(text_model_config)
+        self._summary_moderator = self._text_moderator
+        summary_model_id = audio_model_config.get("api_summary_model_id")
+        if (
+            self.text_config.get("backend", "api") == "api"
+            and summary_model_id
+            and summary_model_id != self.text_config.get("api_model_id")
+        ):
+            summary_config = dict(text_model_config)
+            summary_config["api_model_id"] = summary_model_id
+            self._summary_moderator = TextModerationPlugin(summary_config)
 
     def get_input_schema(self):
         return {
@@ -601,9 +466,10 @@ class AudioModerationPlugin(ProcessingPlugin):
         if transcript is None:
             return {
                 "allowed": False,
-                "reason": "Audio could not be transcribed. Upload blocked for safety.",
+                "reason": "Audio moderation is temporarily unavailable.",
                 "summary": "",
-                "transcript": ""
+                "transcript": "",
+                "system_error": True,
             }
 
         if not transcript.strip():
@@ -630,117 +496,26 @@ class AudioModerationPlugin(ProcessingPlugin):
             "reason": moderation["reason"],
             "summary": summary,
             "transcript": transcript,
+            "system_error": moderation.get("system_error", False),
         }
 
     def _summarize_transcript(self, transcript):
-        if self.text_config.get("backend", "api") == "api":
-            try:
-                completion = self._summary_client.chat.completions.create(
-                    model=self.audio_config.get(
-                        "api_summary_model_id",
-                        self.text_config["api_model_id"]
-                    ),
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": "Summarize audio transcripts concisely and objectively."
-                        },
-                        {
-                            "role": "user",
-                            "content": (
-                                "Summarize this audio transcript in 1-2 sentences. "
-                                f"Transcript: {transcript}"
-                            )
-                        }
-                    ],
-                    max_tokens=150,
-                    temperature=0.2,
-                )
-                return (completion.choices[0].message.content or "").strip()
-            except Exception as exc:
-                logger.error("Transcript summarization failed: %s", exc)
-                return None
-
         try:
-            moderator = self._text_moderator
-            prompt = (
-                "Summarize this audio transcript in 1-2 sentences, objectively:\n\n"
-                f"{transcript}"
-            )
-            output = moderator._generator(
-                prompt,
+            return self._summary_moderator.generate_text(
+                "Summarize audio transcripts concisely and objectively.",
+                f"Summarize this audio transcript in 1-2 sentences:\n\n{transcript}",
                 max_new_tokens=96,
-                do_sample=False,
-                return_full_text=False,
+                temperature=0.2,
             )
-            return (output[0].get("generated_text", "") or "").strip()
         except Exception as exc:
-            logger.error("Local transcript summarization failed: %s", exc)
+            logger.error("Transcript summarization failed: %s", exc)
             return None
 
     def _transcribe(self, base64_data, mime_type):
-        if self.backend == "api":
-            return self._transcribe_api(base64_data, mime_type)
-        return self._transcribe_local(base64_data)
-
-    def _transcribe_api(self, base64_data, mime_type):
         try:
-            raw_bytes = base64.b64decode(base64_data)
+            return self._audio_backend.transcribe(base64_data, mime_type)
         except Exception as exc:
-            logger.error("Audio base64 decode failed: %s", exc)
-            return None
-
-        fmt = mime_type.split("/")[-1].split(";")[0].lower() or "wav"
-        if fmt == "mpeg":
-            fmt = "mp3"
-        elif fmt == "mp4":
-            fmt = "m4a"
-
-        file_name = f"input.{fmt}"
-        audio_file = io.BytesIO(raw_bytes)
-        audio_file.name = file_name
-
-        try:
-            transcription = self._audio_client.audio.transcriptions.create(
-                file=(file_name, raw_bytes, mime_type),
-                model=self.audio_config["api_model_id"],
-            )
-            if hasattr(transcription, "text"):
-                return (transcription.text or "").strip()
-            if isinstance(transcription, dict):
-                return (transcription.get("text", "") or "").strip()
-            return str(transcription).strip()
-        except Exception as exc:
-            logger.error("Groq transcription failed: %s", exc)
-            return None
-
-    def _transcribe_local(self, base64_data):
-        try:
-            import soundfile as sf
-            import numpy as np
-            from pydub import AudioSegment
-        except ImportError as exc:
-            raise ImportError(
-                "Local audio backend requires 'soundfile', 'numpy', and 'pydub'."
-            ) from exc
-
-        try:
-            raw_bytes = base64.b64decode(base64_data)
-            audio_segment = AudioSegment.from_file(io.BytesIO(raw_bytes))
-            wav_buffer = io.BytesIO()
-            audio_segment.export(wav_buffer, format="wav")
-            wav_buffer.seek(0)
-            audio_array, sample_rate = sf.read(wav_buffer)
-
-            if hasattr(audio_array, "ndim") and audio_array.ndim > 1:
-                audio_array = np.mean(audio_array, axis=1)
-
-            output = self._asr_pipeline({"array": audio_array, "sampling_rate": sample_rate})
-            if isinstance(output, dict):
-                return (output.get("text", "") or "").strip()
-            return str(output).strip()
-        except Exception as exc:
-            logger.error("Local transcription failed: %s", exc)
+            logger.error("Audio transcription failed: %s", exc)
             return None
 
 
@@ -750,11 +525,22 @@ class ProcessingEngine:
     def __init__(self):
         self._plugins = {}
 
+    @staticmethod
+    def _plugin_backend(plugin):
+        return getattr(plugin, "backend", getattr(plugin, "config", {}).get("backend", "-"))
+
     def register_plugin(self, plugin):
         if not isinstance(plugin, ProcessingPlugin):
             raise TypeError(f"Expected ProcessingPlugin, got {type(plugin).__name__}")
         self._plugins[plugin.name] = plugin
-        logger.info("Plugin registered: %s", plugin.name)
+        log_event(
+            logger,
+            logging.INFO,
+            "plugin_registered",
+            f"Plugin registered: {plugin.name}",
+            category="system",
+            details={"plugin": plugin.name, "backend": self._plugin_backend(plugin)},
+        )
 
     def get_plugin(self, plugin_name):
         return self._plugins.get(plugin_name)
@@ -767,5 +553,12 @@ class ProcessingEngine:
         if not plugin:
             available = ", ".join(self._plugins.keys()) or "none"
             raise KeyError(f"Plugin '{plugin_name}' not found. Available: {available}")
-        logger.info("Processing with plugin: %s", plugin_name)
+        log_event(
+            logger,
+            logging.INFO,
+            "plugin_processing",
+            f"Processing with plugin: {plugin_name}",
+            category="moderation",
+            details={"plugin": plugin_name, "backend": self._plugin_backend(plugin)},
+        )
         return plugin.process(input_data, context)

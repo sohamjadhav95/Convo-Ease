@@ -16,6 +16,13 @@ logger = setup_logging("message_store")
 class MessageStore:
     """Handles all message CRUD operations."""
 
+    _SYSTEM_FAILURE_MARKERS = (
+        "moderation error:",
+        "invalid api key",
+        "temporarily unavailable",
+        "processing error:",
+    )
+
     @staticmethod
     def _now():
         return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -103,6 +110,8 @@ class MessageStore:
         flagged = msgs[msgs["status"] == "FLAGGED"].sort_values("timestamp", ascending=False)
         records = []
         for row in flagged.to_dict("records"):
+            if MessageStore._is_system_failure_reason(row.get("reason", "")):
+                continue
             category = MessageStore._categorize_reason(
                 row.get("reason", ""),
                 row.get("message", ""),
@@ -167,6 +176,13 @@ class MessageStore:
             if any(keyword in text for keyword in keywords):
                 return category
         return "policy"
+
+    @staticmethod
+    def _is_system_failure_reason(reason):
+        text = str(reason or "").strip().lower()
+        if not text:
+            return False
+        return any(marker in text for marker in MessageStore._SYSTEM_FAILURE_MARKERS)
 
     @staticmethod
     def _member_trust_profile(pass_count, flagged_count):
@@ -276,6 +292,8 @@ class MessageStore:
     @staticmethod
     def get_moderation_report(group_id):
         msgs = MessageStore.load_messages(group_id)
+        if not msgs.empty:
+            msgs = msgs[~msgs["reason"].apply(MessageStore._is_system_failure_reason)]
         empty = {
             "total_messages": 0,
             "pass_count": 0,

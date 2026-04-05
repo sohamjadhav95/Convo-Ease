@@ -87,6 +87,10 @@ def install_test_ai(monkeypatch=None):
 
     blocked_terms = {"bad", "insult", "hate", "abuse", "spoiler", "unsafe"}
 
+    class FakeTextBackend:
+        def generate(self, system_prompt, user_prompt, max_new_tokens=280, temperature=0.2):
+            return fake_generate_text(None, system_prompt, user_prompt, max_new_tokens=max_new_tokens, temperature=temperature)
+
     def fake_text_process(self, input_data, context=None):
         message = str(input_data.get("message", "") or "")
         rules = str(input_data.get("rules", "") or "")
@@ -175,6 +179,30 @@ def install_test_ai(monkeypatch=None):
             "transcript": transcript,
         }
 
+    def fake_text_init(self, model_config):
+        self.config = model_config
+        self._backend = FakeTextBackend()
+
+    def fake_image_init(self, text_model_config, vision_model_config):
+        self.text_config = text_model_config
+        self.vision_config = vision_model_config
+        self.backend = vision_model_config.get("backend", "api")
+        self._vision_client = None
+        self._vision_pipeline = None
+        self._text_moderator = TextModerationPlugin(text_model_config)
+
+    def fake_audio_init(self, text_model_config, audio_model_config):
+        self.text_config = text_model_config
+        self.audio_config = audio_model_config
+        self.backend = audio_model_config.get("backend", "api")
+        self._text_moderator = TextModerationPlugin(text_model_config)
+        self._summary_client = None
+        self._audio_client = None
+        self._asr_pipeline = None
+
+    _assign(TextModerationPlugin, "__init__", fake_text_init, monkeypatch)
+    _assign(ImageModerationPlugin, "__init__", fake_image_init, monkeypatch)
+    _assign(AudioModerationPlugin, "__init__", fake_audio_init, monkeypatch)
     _assign(TextModerationPlugin, "process", fake_text_process, monkeypatch)
     _assign(TextModerationPlugin, "generate_text", fake_generate_text, monkeypatch)
     _assign(ImageModerationPlugin, "process", fake_image_process, monkeypatch)

@@ -35,6 +35,11 @@ from core_processing_engine import ProcessingEngine, TextModerationPlugin, Image
 
 logger = setup_logging("main")
 
+_SILENT_REQUEST_ROUTES = {
+    "GET:/api/groups",
+    "GET:/api/groups/<group_id>/messages",
+}
+
 
 def _request_context():
     return {
@@ -54,6 +59,45 @@ def _bind_request_context(user=None, group_id=None):
 def _payload_preview(value, limit=140):
     text = str(value or "").strip().replace("\n", " ")
     return text[:limit] + ("..." if len(text) > limit else "")
+
+
+def _request_route_key():
+    route_rule = getattr(request.url_rule, "rule", None)
+    return f"{request.method}:{route_rule or request.path}"
+
+
+def _should_skip_request_log():
+    return request.path.startswith("/api/") and _request_route_key() in _SILENT_REQUEST_ROUTES
+
+
+def _plugin_backend_name(plugin):
+    if not plugin:
+        return "-"
+    return getattr(plugin, "backend", getattr(plugin, "config", {}).get("backend", "-"))
+
+
+_BACKEND_FAILURE_MARKERS = (
+    "moderation error:",
+    "invalid api key",
+    "temporarily unavailable",
+    "processing error:",
+)
+
+
+def _is_backend_failure_reason(reason):
+    text = str(reason or "").strip().lower()
+    if not text:
+        return False
+    return any(marker in text for marker in _BACKEND_FAILURE_MARKERS)
+
+
+def _is_system_moderation_result(result):
+    result = result or {}
+    return bool(result.get("system_error")) or _is_backend_failure_reason(result.get("reason", ""))
+
+
+def _service_unavailable_message(kind):
+    return f"{kind} moderation is temporarily unavailable. Please try again later."
 
 
 def _extract_bullets(text, min_items=3, max_items=5):
@@ -211,6 +255,29 @@ def safe_json(data, status=200):
         mimetype="application/json"
     )
 
+
+def _service_unavailable_response(kind):
+    return safe_json(
+        {
+            "success": False,
+            "status": "UNAVAILABLE",
+            "message": _service_unavailable_message(kind),
+        },
+        status=503,
+    )
+
+
+def _normalize_audio_extension(mime_type):
+    fmt = mime_type.split("/")[-1].split(";")[0].lower().strip() or "wav"
+    aliases = {
+        "mpeg": "mp3",
+        "mp4": "m4a",
+        "x-m4a": "m4a",
+        "x-wav": "wav",
+        "wave": "wav",
+    }
+    return aliases.get(fmt, fmt)
+
 def create_app():
     """Application factory — creates and configures the Flask app."""
     app = Flask(
@@ -227,7 +294,8 @@ def create_app():
         g.request_started_at = time.perf_counter()
         g.request_user = request.args.get("username", "-")
         g.request_group_id = request.view_args.get("group_id", "-") if request.view_args else "-"
-        if request.path.startswith("/api/"):
+        g.skip_request_log = _should_skip_request_log()
+        if request.path.startswith("/api/") and not g.skip_request_log:
             log_event(
                 logger,
                 logging.INFO,
@@ -242,8 +310,10 @@ def create_app():
 
     @app.after_request
     def log_response(response):
-        if request.path.startswith("/api/"):
-            duration_ms = round((time.perf_counter() - g.request_started_at) * 1000, 2)
+        if request.path.startswith("/api/") and (
+            not getattr(g, "skip_request_log", False) or response.status_code >= 400
+        ):
+            duration_ms = round((time.perf_counter() - getattr(g, "request_started_at", time.perf_counter())) * 1000, 2)
             level = logging.WARNING if response.status_code >= 400 else logging.INFO
             log_event(
                 logger,
@@ -265,23 +335,65 @@ def create_app():
 
     # ── Initialize Processing Engine ─────────────────────────────────────
     engine = ProcessingEngine()
-    try:
-        text_plugin = TextModerationPlugin(TEXT_MODEL_CONFIG)
-        engine.register_plugin(text_plugin)
-    except Exception as e:
-        logger.warning(f"TextModerationPlugin not available: {e}")
+    plugin_health = {}
 
-    try:
-        image_plugin = ImageModerationPlugin(TEXT_MODEL_CONFIG, IMAGE_MODEL_CONFIG)
-        engine.register_plugin(image_plugin)
-    except Exception as e:
-        logger.warning(f"ImageModerationPlugin not available: {e}")
+    def register_processing_plugin(plugin_name, factory, config=None, level=logging.WARNING):
+        backend = (config or {}).get("backend", "-")
+        try:
+            plugin = factory()
+            engine.register_plugin(plugin)
+            plugin_health[plugin_name] = {"status": "ready", "backend": backend}
+            log_event(
+                logger,
+                logging.INFO,
+                "plugin_ready",
+                f"{plugin_name} initialized",
+                category="system",
+                details={"plugin": plugin_name, "backend": backend},
+            )
+            return plugin
+        except Exception as exc:
+            plugin_health[plugin_name] = {
+                "status": "unavailable",
+                "backend": backend,
+                "error": str(exc),
+            }
+            log_event(
+                logger,
+                level,
+                "plugin_unavailable",
+                f"{plugin_name} unavailable",
+                category="system",
+                details={"plugin": plugin_name, "backend": backend, "error": str(exc)},
+            )
+            return None
 
-    try:
-        audio_plugin = AudioModerationPlugin(TEXT_MODEL_CONFIG, AUDIO_MODEL_CONFIG)
-        engine.register_plugin(audio_plugin)
-    except Exception as e:
-        logger.warning(f"AudioModerationPlugin not available: {e}")
+    text_plugin = register_processing_plugin(
+        "text_moderation",
+        lambda: TextModerationPlugin(TEXT_MODEL_CONFIG),
+        TEXT_MODEL_CONFIG,
+        level=logging.ERROR,
+    )
+    register_processing_plugin(
+        "image_moderation",
+        lambda: ImageModerationPlugin(
+            TEXT_MODEL_CONFIG,
+            IMAGE_MODEL_CONFIG,
+            text_moderator=text_plugin,
+        ),
+        IMAGE_MODEL_CONFIG,
+    )
+    register_processing_plugin(
+        "audio_moderation",
+        lambda: AudioModerationPlugin(
+            TEXT_MODEL_CONFIG,
+            AUDIO_MODEL_CONFIG,
+            text_moderator=text_plugin,
+        ),
+        AUDIO_MODEL_CONFIG,
+    )
+
+    app.config["PROCESSING_PLUGIN_HEALTH"] = plugin_health
 
     log_event(
         logger,
@@ -289,7 +401,7 @@ def create_app():
         "engine_ready",
         "Processing engine initialized",
         category="system",
-        details={"plugins": engine.list_plugins()},
+        details={"plugins": engine.list_plugins(), "health": plugin_health},
     )
 
     def run_text_task(system_prompt, user_prompt, fallback_text=""):
@@ -517,9 +629,31 @@ def create_app():
         moderation_sensitivity = group.get("moderation_sensitivity", "Moderate")
         recent = MessageStore.get_visible_messages(group_id)
         recent_context = [f"{m['username']}: {m['message']}" for m in recent[-6:]]
+        text_plugin = engine.get_plugin("text_moderation")
+        text_backend = _plugin_backend_name(text_plugin)
+
+        if rules and not text_plugin:
+            log_event(
+                logger,
+                logging.ERROR,
+                "text_moderation_unavailable",
+                "Text message blocked because moderation backend is unavailable",
+                category="moderation",
+                **_request_context(),
+                details={
+                    "configured_backend": TEXT_MODEL_CONFIG.get("backend", "-"),
+                    "backend": text_backend,
+                    "message_preview": _payload_preview(message),
+                },
+            )
+            return jsonify({
+                "success": False,
+                "status": "UNAVAILABLE",
+                "message": _service_unavailable_message("Text"),
+            }), 503
 
         moderation_result = {"allowed": True, "reason": ""}
-        if engine.get_plugin("text_moderation") and rules:
+        if text_plugin and rules:
             try:
                 moderation_result = engine.process("text_moderation", {
                     "message": message,
@@ -535,9 +669,25 @@ def create_app():
                     "Text moderation failed",
                     category="moderation",
                     **_request_context(),
-                    details={"error": str(e)},
+                    details={"error": str(e), "backend": text_backend},
                 )
-                moderation_result = {"allowed": False, "reason": f"Moderation error: {str(e)}"}
+                return _service_unavailable_response("Text")
+
+        if _is_system_moderation_result(moderation_result):
+            log_event(
+                logger,
+                logging.ERROR,
+                "text_moderation_unavailable",
+                "Text moderation returned a system failure",
+                category="moderation",
+                **_request_context(),
+                details={
+                    "backend": text_backend,
+                    "reason": moderation_result.get("reason", ""),
+                    "message_preview": _payload_preview(message),
+                },
+            )
+            return _service_unavailable_response("Text")
 
         if moderation_result["allowed"]:
             msg_id = MessageStore.save_message(
@@ -561,6 +711,7 @@ def create_app():
                 **_request_context(),
                 message_id=msg_id,
                 details={
+                    "backend": text_backend,
                     "message_preview": _payload_preview(message),
                     "detected_language": moderation_result.get("detected_language", ""),
                 },
@@ -589,6 +740,7 @@ def create_app():
                 **_request_context(),
                 message_id=msg_id,
                 details={
+                    "backend": text_backend,
                     "message_preview": _payload_preview(message),
                     "reason": moderation_result["reason"],
                     "detected_language": moderation_result.get("detected_language", ""),
@@ -721,8 +873,9 @@ def create_app():
             return jsonify({"success": False, "message": "Group not found."}), 404
 
         image_plugin = engine.get_plugin("image_moderation")
+        image_backend = _plugin_backend_name(image_plugin)
         if not image_plugin:
-            return jsonify({"success": False, "message": "Image moderation not available."}), 503
+            return _service_unavailable_response("Image")
 
         rules = group.get("rules", "")
         moderation_sensitivity = group.get("moderation_sensitivity", "Moderate")
@@ -745,9 +898,21 @@ def create_app():
                 "Image moderation failed",
                 category="media",
                 **_request_context(),
-                details={"error": str(e), "mime_type": mime_type},
+                details={"error": str(e), "mime_type": mime_type, "backend": image_backend},
             )
-            return jsonify({"success": False, "message": f"Processing error: {str(e)}"}), 500
+            return _service_unavailable_response("Image")
+
+        if _is_system_moderation_result(result):
+            log_event(
+                logger,
+                logging.ERROR,
+                "image_moderation_unavailable",
+                "Image moderation returned a system failure",
+                category="media",
+                **_request_context(),
+                details={"backend": image_backend, "mime_type": mime_type, "reason": result.get("reason", "")},
+            )
+            return _service_unavailable_response("Image")
 
         # Decode base64 and save image to disk so it persists across restarts
         # and is visible to all users via /media/image/{filename}.
@@ -802,7 +967,7 @@ def create_app():
                 category="moderation",
                 **_request_context(),
                 message_id=msg_id,
-                details={"summary_preview": _payload_preview(summary_text), "media_url": media_url},
+                details={"backend": image_backend, "summary_preview": _payload_preview(summary_text), "media_url": media_url},
             )
             return safe_json({
                 "success":    True,
@@ -824,7 +989,7 @@ def create_app():
                 category="moderation",
                 **_request_context(),
                 message_id=msg_id,
-                details={"reason": result["reason"], "summary_preview": _payload_preview(summary_text)},
+                details={"backend": image_backend, "reason": result["reason"], "summary_preview": _payload_preview(summary_text)},
             )
             return safe_json({
                 "success": False,
@@ -867,8 +1032,9 @@ def create_app():
             return jsonify({"success": False, "message": "Group not found."}), 404
 
         audio_plugin = engine.get_plugin("audio_moderation")
+        audio_backend = _plugin_backend_name(audio_plugin)
         if not audio_plugin:
-            return jsonify({"success": False, "message": "Audio moderation not available."}), 503
+            return _service_unavailable_response("Audio")
 
         rules = group.get("rules", "")
         moderation_sensitivity = group.get("moderation_sensitivity", "Moderate")
@@ -891,13 +1057,24 @@ def create_app():
                 "Audio moderation failed",
                 category="media",
                 **_request_context(),
-                details={"error": str(e), "mime_type": mime_type},
+                details={"error": str(e), "mime_type": mime_type, "backend": audio_backend},
             )
-            return jsonify({"success": False, "message": f"Processing error: {str(e)}"}), 500
+            return _service_unavailable_response("Audio")
+
+        if _is_system_moderation_result(result):
+            log_event(
+                logger,
+                logging.ERROR,
+                "audio_moderation_unavailable",
+                "Audio moderation returned a system failure",
+                category="media",
+                **_request_context(),
+                details={"backend": audio_backend, "mime_type": mime_type, "reason": result.get("reason", "")},
+            )
+            return _service_unavailable_response("Audio")
 
         # Save audio file to disk so it persists and is playable from any client
-        ext = mime_type.split("/")[-1].split(";")[0]  # e.g. "wav", "mpeg", "ogg"
-        if ext == "mpeg": ext = "mp3"
+        ext = _normalize_audio_extension(mime_type)
         import uuid as _uuid
         filename  = f"{str(_uuid.uuid4())}.{ext}"
         filepath  = os.path.join(MEDIA_AUDIO_DIR, filename)
@@ -946,6 +1123,7 @@ def create_app():
                 **_request_context(),
                 message_id=msg_id,
                 details={
+                    "backend": audio_backend,
                     "summary_preview": _payload_preview(summary_text),
                     "transcript_preview": _payload_preview(transcript),
                 },
@@ -972,6 +1150,7 @@ def create_app():
                 **_request_context(),
                 message_id=msg_id,
                 details={
+                    "backend": audio_backend,
                     "reason": result["reason"],
                     "summary_preview": _payload_preview(summary_text),
                     "transcript_preview": _payload_preview(transcript),

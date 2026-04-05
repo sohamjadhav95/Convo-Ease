@@ -43,7 +43,7 @@ _API_BASE_URL = os.getenv(
     os.getenv("CONVOEASE_API_URL", "https://api.groq.com/openai/v1")
 )
 
-GLOBAL_MODEL_MODE = os.getenv("CONVOEASE_MODEL_MODE", "api") # Can be "api" or "local", overridden by specific model configs below.
+GLOBAL_MODEL_MODE = os.getenv("CONVOEASE_MODEL_MODE", "local") # Can be "api" or "local", overridden by specific model configs below.
 
 TEXT_MODEL_CONFIG = {
     "backend": os.getenv("CONVOEASE_TEXT_BACKEND", GLOBAL_MODEL_MODE),
@@ -52,6 +52,8 @@ TEXT_MODEL_CONFIG = {
     "api_model_id": os.getenv("CONVOEASE_TEXT_MODEL_ID", "openai/gpt-oss-120b"),
     "local_model_path": os.getenv("CONVOEASE_TEXT_MODEL_PATH", TEXT_MODELS_DIR),
     "local_model_type": os.getenv("CONVOEASE_TEXT_MODEL_TYPE", "causal-lm"),
+    "local_device_preference": os.getenv("CONVOEASE_TEXT_DEVICE_PREFERENCE", "cuda"),
+    "allow_cpu_offload": os.getenv("CONVOEASE_TEXT_ALLOW_CPU_OFFLOAD", "true"),
 }
 
 IMAGE_MODEL_CONFIG = {
@@ -59,7 +61,7 @@ IMAGE_MODEL_CONFIG = {
     "api_key": _API_KEY,
     "base_url": _API_BASE_URL,
     "api_model_id": os.getenv("CONVOEASE_IMAGE_MODEL_ID", "meta-llama/llama-4-scout-17b-16e-instruct"),
-    "local_model_path": os.getenv("CONVOEASE_IMAGE_MODEL_PATH", IMAGE_MODELS_DIR),
+    "local_model_path": os.getenv("CONVOEASE_IMAGE_MODEL_PATH", TEXT_MODELS_DIR),
     "local_model_type": os.getenv("CONVOEASE_IMAGE_MODEL_TYPE", "image-text-to-text"),
 }
 
@@ -69,6 +71,7 @@ AUDIO_MODEL_CONFIG = {
     "base_url": _API_BASE_URL,
     "api_model_id": os.getenv("CONVOEASE_AUDIO_MODEL_ID", "whisper-large-v3-turbo"),
     "local_model_path": os.getenv("CONVOEASE_AUDIO_MODEL_PATH", AUDIO_MODELS_DIR),
+    "whisper_model_size": os.getenv("CONVOEASE_WHISPER_SIZE", "base"),
     "local_model_type": os.getenv("CONVOEASE_AUDIO_MODEL_TYPE", "automatic-speech-recognition"),
     "api_summary_model_id": os.getenv("CONVOEASE_AUDIO_SUMMARY_MODEL_ID", "llama-3.1-8b-instant"),
 }
@@ -195,8 +198,14 @@ def setup_logging(name="convoease"):
     logger.addHandler(_build_handler(
         os.path.join(LOG_DIR, "audit.log"),
         fmt,
-        filters=[CategoryFilter({"auth", "group", "settings", "system", "request"})],
+        filters=[CategoryFilter({"auth", "group", "settings", "system"})],
     ))
+    if LOG_LEVEL == logging.DEBUG:
+        logger.addHandler(_build_handler(
+            os.path.join(LOG_DIR, "debug.log"),
+            fmt,
+            level=logging.DEBUG,
+        ))
 
     return logger
 
