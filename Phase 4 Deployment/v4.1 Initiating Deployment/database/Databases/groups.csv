@@ -1,0 +1,10 @@
+group_id,group_name,admin_username,password,rules,moderation_sensitivity,created_at
+273A57,Engineering 2025,soham,12345,Be respectful.Be respectful. Only educational content.,,2026-02-21 12:56:15
+994055,Simpsons 2026,sohamjadhav95,12345,"Be respectful. only company related works and discussions, Spam or advertisements are not allowed. tech related content is allowed",,2026-02-21 13:04:49
+CC832A,Test Group 3.3,testuser33,group123,Be respectful.Only work-related topics allowed. No offensive content.,,2026-02-21 19:46:39
+D42174,Image Test Group,imgtest99,pass123,"Only professional content. No offensive or adult material.
+Be respectful.",,2026-02-21 20:09:16
+40AB66,Persist Test Group,persisttest,pass123,Be respectful.,,2026-02-21 20:24:28
+53CA26,TestGroup,testuser2,test,Be respectful,,2026-02-21 22:42:04
+DEC52D,Simpsons 2026,123456,123456,"Be respectful. General Movies and series related discussion and messages are allowed.
+watching movies cinemas web series related discussion is also allowed.",,2026-04-02 15:12:00
