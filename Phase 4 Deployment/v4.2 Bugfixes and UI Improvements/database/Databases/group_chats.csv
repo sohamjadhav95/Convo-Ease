@@ -1,0 +1,97 @@
+message_id,group_id,username,message,status,reason,summary,media_url,group_rules,timestamp,initial_status,initial_reason,detected_language,language_confidence,translated_message,appeal_status,appeal_text,appeal_ai_status,appeal_ai_reason,appeal_submitted_at,appeal_reviewed_by,appeal_reviewed_at,appeal_admin_note
+62404c12-10d9-4052-bde2-bf051f900cfa,F1D426,arjun_sharma,Can someone share notes from today's lecture on binary trees?,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:02:08,PASS,,en,1.0,Can someone share notes from today's lecture on binary trees?,,,,,,,,
+0f17994d-805a-44b4-b881-86ed7e34cbc1,F1D426,arjun_sharma,"I think the answer to Q3 is O(n log n), here is my working...",PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:02:28,PASS,,en,0.86,"I think the answer to Q3 is O(n log n), here is my working...",,,,,,,,
+a14ee4f0-8491-4ea4-a71e-fc59372ef528,F1D426,sneha_more,Bhai exam ka paper mil sakta hai kya? 500 rupees dungi.,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:03:02,PASS,,id,1.0,"Brother, can I get the exam paper? 500 rupees dungi.",,,,,,,,
+d8d08c58-e197-473a-a10a-5f6b4677fd8c,F1D426,sneha_more,This is not allowed on this group,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:04:13,PASS,,en,1.0,This is not allowed on this group,,,,,,,,
+7406e065-54bb-4122-91dc-8894a0bd2f94,F1D426,sneha_more,Anyone want to watch IPL tonight? Totally off topic I know lol,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:04:26,PASS,,en,1.0,Anyone want to watch IPL tonight? Totally off topic I know lol,,,,,,,,
+5ddce3e1-a670-4115-840c-75dcbcb84c7c,F1D426,sneha_more,Go to hell,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:04:42,PASS,,en,0.86,Go to hell,,,,,,,,
+4632bd74-6403-4e77-99dd-dcf8730b5bc6,F1D426,arjun_sharma,Chapter 5 practice problems are up on the portal.,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:05:47,PASS,,en,1.0,Chapter 5 practice problems are up on the portal.,,,,,,,,
+4eef667e-5f3f-4e7a-af75-e6a305336178,F1D426,sneha_more,Check this out: free-notes-pirated.xyz,PASS,,,,"1.Only academic topics — no off-topic discussions
+2.No abusive language or personal attacks
+3.No sharing of pirated study material or answer keys
+4.No promotional messages or spam links
+5.English or Marathi only",2026-04-05 21:07:02,PASS,,en,1.0,Check this out: free-notes-pirated.xyz,,,,,,,,
+dedef5b8-8a4f-47da-88ac-c2bb106f62ad,F1D426,arjun_sharma,What deployment setup are you all using? We just moved to Render.,PASS,,,,"1.Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:08:51,PASS,,en,1.0,What deployment setup are you all using? We just moved to Render.,,,,,,,,
+404db015-ecc0-48d7-89cd-cd0b94a7ba60,F1D426,arjun_sharma,"You're so dumb, how did you even pass last semester?",PASS,,,,"1.Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:09:06,PASS,,fr,0.71,"You're so dumb, how did you even pass last semester?",,,,,,,,
+f2c5d4b2-0ef8-465d-8ef2-b292516b7c9b,F1D426,sneha_more,who the hell are you,PASS,,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:10:01,PASS,,en,1.0,who the hell are you,,,,,,,,
+96259a7b-6c4a-4dca-8b44-7383910f228c,F1D426,arjun_sharma,Go to hell,FLAGGED,abusive language or personal attack,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:22:31,FLAGGED,abusive language or personal attack,en,0.86,Go to hell,,,,,,,,
+4847866a-b0d6-4f6a-a41e-118084698b97,F1D426,arjun_sharma,Chapter 5 practice problems are up on the portal.,PASS,,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:23:00,PASS,,en,1.0,Chapter 5 practice problems are up on the portal.,,,,,,,,
+6036e21a-c5f0-4444-a31f-74d15825de66,F1D426,sneha_more,Bhai exam ka paper mil sakta hai kya? 500 rupees dungi.,FLAGGED,"<Violation of ADMIN RULES: request for exam paper (unauthorized distribution of academic material) and offering payment, which is prohibited.>",,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:24:34,FLAGGED,"<Violation of ADMIN RULES: request for exam paper (unauthorized distribution of academic material) and offering payment, which is prohibited.>",id,1.0,"Brother, can I get the exam paper? 500 rupees dungi.",,,,,,,,
+04094b3d-95ef-4d95-b09e-72c914e67493,F1D426,sneha_more,[IMAGE],FLAGGED,Off-topic content (description of a movie poster not related to academic topics),"The image is a movie poster featuring the title ""RAMBO"" in neon green letters. The poster displays a man, a woman wearing a hijab, a man with a beard, and a white donkey with a unicorn horn between their profiles. The background is dark green with diagonal stripes.",/media/image/3ad10be2-5a47-49c8-b77a-810eaaeada30.webp,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:24:44,FLAGGED,Off-topic content (description of a movie poster not related to academic topics),,,,,,,,,,,
+8a49bff7-3b4c-40ef-85e6-814a5e4881c8,F1D426,sneha_more,[IMAGE],PASS,,"The image presents a detailed flowchart illustrating the architecture of a transformer model, which is a type of neural network designed primarily for natural language processing tasks. The chart is divided into two main sections: the left side represents the encoder, and the right side represents the decoder.
+
+**Encoder (Left Side):**
+
+*   **Input:** The encoder takes in a source sequence.
+*   **Embeddings/Projections:** The input sequence is first embedded or projected into a higher-dimensional space.
+*   **Positional Encoding:** Positional encoding is added to the embedded input to preserve the order of the sequence.
+*   **Multi-Headed Self-Attention:** The encoded input then passes through a multi-headed self-attention mechanism, which allows the model to attend to different parts of the input sequence simultaneously and weigh their importance.
+*   **Feed-Forward Network:** The output from the self-attention mechanism is fed into a feed-forward network (FFN), which consists of two linear layers with a ReLU activation function in between.
+*   **Norm:** The output from the FFN is normalized using layer normalization.
+*   **Nx ""Layers"":** The encoder consists of N identical layers, each comprising the multi-headed self-attention mechanism, FFN, and normalization.
+
+**Decoder (Right Side):**
+
+*   **Input:** The decoder takes in a shifted target sequence.
+*   **Embeddings/Projections:** The input sequence is first embedded or projected into a higher-dimensional space.
+*   **Positional Encoding:** Positional encoding is added to the embedded input to preserve the order of the sequence.
+*   **Masked Multi-Headed Self-Attention:** The encoded input then passes through a masked multi-headed self-attention mechanism, which allows the model to attend to different parts of the input sequence simultaneously while masking future tokens to prevent information leakage.
+*   **Multi-Headed Cross-Attention:** The output from the self-attention mechanism is fed into a multi-headed cross-attention mechanism, which allows the model to attend to the output from the encoder.
+*   **Feed-Forward Network:** The output from the cross-attention mechanism is fed into a feed-forward network (FFN), which consists of two linear layers with a ReLU activation function in between.
+*   **Norm:** The output from the FFN is normalized using layer normalization.
+*   **Nx ""Layers"":** The decoder consists of N identical layers, each comprising the masked multi-headed self-attention mechanism, cross-attention mechanism, FFN, and normalization.
+
+**Output:**
+
+*   **Linear:** The final output from the decoder is passed through a linear layer.
+*   **Norm:** The output from the linear layer is normalized using layer normalization.
+*   **Predictions:** The final output is used to make predictions.
+
+In summary, the image provides a detailed illustration of the transformer model's architecture, highlighting the key components of the encoder and decoder, including self-attention mechanisms, feed-forward networks, and normalization layers.",/media/image/6b186e39-1ce8-46d5-b11c-3a76fd5a683d.webp,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:25:15,PASS,,,,,,,,,,,,
+0b12d469-4d09-451c-99de-5f95d19321ae,F1D426,sneha_more,what's this,PASS,,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:55:06,PASS,,en,1.0,what's this,,,,,,,,
+ede54577-462b-4a83-bdbe-131d517d3596,F1D426,sneha_more,Give me 500 Rupees for shopping,FLAGGED,"Off-topic request for personal money, not an academic discussion.",,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:55:37,FLAGGED,"Off-topic request for personal money, not an academic discussion.",en,1.0,Give me 500 Rupees for shopping,,,,,,,,
+f0a92d22-0754-4c42-841d-094981eb681c,F1D426,sneha_more,are you in college,FLAGGED,Off‑topic personal question not related to academic discussion.,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-05 21:55:53,FLAGGED,Off‑topic personal question not related to academic discussion.,en,0.86,are you in college,,,,,,,,
+0e84cf9d-44c2-4938-8f2c-91acc9e75d97,F1D426,sneha_more,Good morning friends,FLAGGED,Off-topic content: greeting not related to academic discussion.,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-06 10:38:50,FLAGGED,Off-topic content: greeting not related to academic discussion.,unknown,,Good morning friends,,,,,,,,
+6b22c3b8-7c78-4f9d-b6b5-28fb5755cf09,F1D426,sneha_more,[IMAGE],PASS,,"The image presents a block diagram illustrating the fundamental components of a computer. The diagram consists of a central processing unit (CPU) connected to the control unit, arithmetic and logical unit, and memory unit, with input and output units linked to the CPU. Arrows indicate the flow of data between these components.",/media/image/465ba51a-632a-480f-b146-87ad537d1d73.jpeg,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-06 10:40:09,PASS,,,,,,,,,,,,
+3b7bb12a-ddd4-4e85-92d6-0b351e43d02b,F1D426,arjun_sharma,[IMAGE],FLAGGED,Off-topic content – the message describes a software issue tracker unrelated to the academic discussion of course material.,"The image shows a screenshot of an issue tracker with a search bar at the top and a list of open issues below. Three open issues are visible, each with a title, issue number, author, and labels. 
+
+The issues are: 
+1. Optimizing and generalizing RNA sequence vectorization in _aptatrans_utils 
+2. AptaTrans test coverage 
+3. aptacom algorithm.",/media/image/9d3f3bca-14a9-4fa1-bc75-cd996250370e.png,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:05:48,FLAGGED,Off-topic content – the message describes a software issue tracker unrelated to the academic discussion of course material.,,,,,,,,,,,
+7d4974ab-e0c9-4b36-83d4-fd60ffb29a1f,F1D426,arjun_sharma,[IMAGE],PASS,,"The image shows a screenshot of a GitHub pull request page with a code conflict resolution interface. The page displays a conflicting file, ""test_LinearGaussianBayesianNetwork.py"", with lines 469-491 visible, and options to accept changes.",/media/image/1f1ed608-8f4b-44a1-88d4-d70dc84a4b0d.png,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:06:16,PASS,,,,,,,,,,,,
+bcc6ada8-5a4f-45f5-8db4-d4d2dee70210,F1D426,arjun_sharma,I'll share a GitHub Screenshot of Issue,FLAGGED,Off-topic content (not related to academic discussion),,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:06:58,FLAGGED,Off-topic content (not related to academic discussion),en,1.0,I'll share a GitHub Screenshot of Issue,,,,,,,,
+516d84f5-2034-4005-8e90-f5eb392d4de0,F1D426,arjun_sharma,You know github,FLAGGED,Off-topic content (not related to academic discussion),,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:07:15,FLAGGED,Off-topic content (not related to academic discussion),en,1.0,You know github,,,,,,,,
+253e6c6d-a39a-41a3-9d5c-207fe3547be4,F1D426,arjun_sharma,You know github,PASS,Approved on appeal by admin.,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:07:30,FLAGGED,Off-topic message.,en,1.0,You know github,APPROVED,GitHub is A tech platform,FLAGGED,The message “You know github” does not constitute an academic discussion and provides no relevant educational content; it remains off‑topic under the group’s rule permitting only academic topics.,2026-04-07 00:07:53,arjun_sharma,2026-04-07 00:08:27,
+7cba4d5a-6edb-403e-ad45-d0afdbdfc8e0,F1D426,arjun_sharma,I,PASS,,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:08:40,PASS,,id,1.0,I,,,,,,,,
+ce2b5813-9d4c-4a28-b75f-09e9a17c80d9,F1D426,arjun_sharma,Share a picture about it,FLAGGED,Off-topic,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:08:49,FLAGGED,Off-topic,en,1.0,Share a picture about it,,,,,,,,
+f47c07f0-3426-49de-b6c5-a4b98bd00dad,F1D426,arjun_sharma,See screenshot,PASS,,,,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:09:01,PASS,,en,0.71,See screenshot,,,,,,,,
+67226187-0278-4bd5-b18d-6f0d75754a6f,F1D426,arjun_sharma,[IMAGE],PASS,,"The image shows a screenshot of an issue tracker page with a search bar at the top and a list of issues below. The list displays three open issues, each with a title, issue number, author, and labels, including enhancements for RNA sequence vectorization, AptaTrans test coverage, and an aptacom algorithm.",/media/image/451d4591-b722-4ff7-ac49-586045d994a0.png,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",2026-04-07 00:09:10,PASS,,,,,,,,,,,,
