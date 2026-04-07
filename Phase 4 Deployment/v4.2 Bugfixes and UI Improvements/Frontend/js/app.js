@@ -160,7 +160,7 @@ function setRuleSuggestionVisibility(source, visible) {
     const suggestionsEl = document.getElementById(isCreate ? 'create-rule-suggestions' : 'admin-rule-suggestions');
     const previewEl = document.getElementById(isCreate ? 'create-rule-preview' : 'admin-rule-preview');
     if (suggestionsEl) suggestionsEl.classList.toggle('hidden', !visible);
-    if (previewEl) previewEl.classList.toggle('hidden', !visible);
+    if (previewEl) previewEl.classList.toggle('hidden', !visible || isCreate);
 }
 
 function autoResizeComposer() {
@@ -323,6 +323,10 @@ function navigateTo(page) {
     } else if (page === 'settings') {
         showPage('page-settings');
         loadSettings();
+    } else if (page === 'moderation') {
+        stopPolling();
+        showPage('page-moderation');
+        loadModerationPage();
     } else {
         showPage('page-auth');
     }
@@ -544,6 +548,13 @@ async function selectGroup(groupId) {
     // Update tooltip based on role
     adminBtn.title = (State.user && group.admin_username === State.user.username)
         ? 'Admin Panel' : 'Group Info';
+    const moderationBtn = document.getElementById('btn-moderation-page-nav');
+    if (moderationBtn) {
+        moderationBtn.classList.remove('hidden');
+        moderationBtn.title = (State.user && group.admin_username === State.user.username)
+            ? 'Moderation Dashboard'
+            : 'My Moderation';
+    }
 
     await loadMemberInsights();
     await loadMessages();
@@ -934,14 +945,14 @@ async function requestRuleSuggestions(source) {
     const groupName = groupNameEl ? groupNameEl.value || groupNameEl.textContent || '' : '';
     if (!rules) {
         suggestionsEl.innerHTML = '<p class="text-muted">Add a few rules first and AI will suggest improvements.</p>';
-        previewEl.textContent = '';
+        if (previewEl) previewEl.textContent = '';
         setRuleSuggestionVisibility(source, false);
         return;
     }
 
     setRuleSuggestionVisibility(source, true);
     suggestionsEl.innerHTML = '<p class="text-muted">Reviewing rules...</p>';
-    previewEl.textContent = '';
+    if (previewEl) previewEl.textContent = '';
 
     try {
         const data = await API.suggestRules(rules, groupName.trim());
@@ -954,7 +965,7 @@ async function requestRuleSuggestions(source) {
         suggestionsEl.innerHTML = suggestions.length
             ? suggestions.map(item => `<div class="rule-suggestion-item">${escapeHtml(item)}</div>`).join('')
             : '<p class="text-muted">No extra suggestions needed.</p>';
-        previewEl.textContent = data.revised_rules || '';
+        if (previewEl) previewEl.textContent = data.revised_rules || '';
     } catch (err) {
         suggestionsEl.innerHTML = '<p class="text-muted">Connection error while suggesting rules.</p>';
     }
@@ -1177,20 +1188,11 @@ function initModals() {
     document.querySelectorAll('[data-admin-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.adminTab;
-
-            // Update active tab style
             document.querySelectorAll('[data-admin-tab]').forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-
-            // Show/hide tab content
             document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
             const tabEl = document.getElementById(`admin-tab-${target}`);
             if (tabEl) tabEl.style.display = 'block';
-
-            // Load report on-demand
-            if (target === 'report' && State.activeGroup) {
-                loadModerationReport(State.activeGroup.group_id);
-            }
         });
     });
 
@@ -1200,8 +1202,7 @@ function initModals() {
         clearErrors('create-group-error');
         const name = document.getElementById('create-name').value.trim();
         const password = document.getElementById('create-password').value.trim();
-        const previewRules = document.getElementById('create-rule-preview').value.trim();
-        const rules = previewRules || document.getElementById('create-rules').value.trim();
+        const rules = document.getElementById('create-rules').value.trim();
         const moderationSensitivity = document.getElementById('create-sensitivity').value;
 
         if (!name) { setError('create-group-error', 'Group name is required.'); return; }
@@ -1213,7 +1214,6 @@ function initModals() {
                 document.getElementById('form-create-group').reset();
                 document.getElementById('create-rules').value = 'Be respectful.';
                 document.getElementById('create-sensitivity').value = 'Moderate';
-                document.getElementById('create-rule-preview').value = '';
                 document.getElementById('create-rule-suggestions').innerHTML = '<p class="text-muted">AI suggestions will appear here.</p>';
                 setRuleSuggestionVisibility('create', false);
                 showToast(`Group "${name}" created!`, 'success');
@@ -1261,26 +1261,24 @@ async function openAdminPanel() {
 
     const isAdmin = State.activeGroup.admin_username === State.user.username;
 
-    // Set panel title based on role
     const titleEl = document.getElementById('admin-panel-title');
     if (titleEl) titleEl.textContent = isAdmin ? 'Admin Panel' : 'Group Info';
 
-    // Show/hide admin-only tabs
-    document.querySelectorAll('[data-admin-only="true"]').forEach(tab => {
-        tab.style.display = isAdmin ? '' : 'none';
-    });
+    const modPageBtn = document.getElementById('btn-open-mod-page');
+    if (modPageBtn) modPageBtn.style.display = isAdmin ? '' : 'none';
 
-    // Reset to Rules tab
+    const flaggedTabBtn = document.getElementById('admin-tab-btn-flagged');
+    if (flaggedTabBtn) flaggedTabBtn.style.display = isAdmin ? '' : 'none';
+
     document.querySelectorAll('[data-admin-tab]').forEach(t => t.classList.remove('active'));
-    const firstTab = document.querySelector('[data-admin-tab="rules"]');
-    if (firstTab) firstTab.classList.add('active');
+    const infoTabBtn = document.querySelector('[data-admin-tab="info"]');
+    if (infoTabBtn) infoTabBtn.classList.add('active');
     document.querySelectorAll('.admin-tab-content').forEach(c => c.style.display = 'none');
-    const rulesTab = document.getElementById('admin-tab-rules');
-    if (rulesTab) rulesTab.style.display = 'block';
+    const infoTab = document.getElementById('admin-tab-info');
+    if (infoTab) infoTab.style.display = 'block';
 
     document.getElementById('admin-group-id').textContent = State.activeGroup.group_id;
 
-    // Members
     try {
         const membersData = await API.getGroupMembers(State.activeGroup.group_id);
         if (membersData.success) {
@@ -1294,58 +1292,65 @@ async function openAdminPanel() {
         document.getElementById('admin-members').textContent = 'Error loading';
     }
 
-    // Rules — editable for admin, read-only for members
+    const myTrustRow = document.getElementById('admin-my-trust-row');
+    if (!isAdmin && myTrustRow) {
+        const myData = State.memberRiskMap[State.user.username];
+        if (myData) {
+            const pill = document.getElementById('admin-my-trust-pill');
+            if (pill) {
+                pill.textContent = myData.trust_score;
+                pill.className = `trust-pill ${myData.badge}`;
+            }
+            myTrustRow.style.display = '';
+        } else {
+            myTrustRow.style.display = 'none';
+        }
+    } else if (myTrustRow) {
+        myTrustRow.style.display = 'none';
+    }
+
+    const sensitivityBlock = document.getElementById('admin-sensitivity-block');
+    if (sensitivityBlock) sensitivityBlock.style.display = isAdmin ? 'block' : 'none';
+    if (isAdmin) {
+        document.getElementById('admin-sensitivity').value =
+            State.activeGroup.moderation_sensitivity || 'Moderate';
+    }
+
     const rulesTextarea = document.getElementById('admin-rules');
     rulesTextarea.value = State.activeGroup.rules || '';
-    document.getElementById('admin-sensitivity').value = State.activeGroup.moderation_sensitivity || 'Moderate';
     document.getElementById('admin-rule-preview').value = '';
-    document.getElementById('admin-rule-suggestions').innerHTML = '<p class="text-muted">AI suggestions will appear here.</p>';
+    document.getElementById('admin-rule-suggestions').innerHTML = '';
     setRuleSuggestionVisibility('admin', false);
     rulesTextarea.readOnly = !isAdmin;
     rulesTextarea.style.opacity = isAdmin ? '' : '0.7';
-    const saveRulesBtn = document.getElementById('btn-save-rules');
-    if (saveRulesBtn) saveRulesBtn.style.display = isAdmin ? '' : 'none';
-    const suggestRulesBtn = document.getElementById('btn-suggest-admin-rules');
-    if (suggestRulesBtn) suggestRulesBtn.style.display = isAdmin ? '' : 'none';
-    const sensitivityEl = document.getElementById('admin-sensitivity');
-    if (sensitivityEl) {
-        sensitivityEl.disabled = !isAdmin;
-        sensitivityEl.style.opacity = isAdmin ? '' : '0.7';
-    }
+    const rulesActions = document.getElementById('admin-rules-actions');
+    if (rulesActions) rulesActions.style.display = isAdmin ? 'block' : 'none';
 
-    // Flagged messages (admin only)
     if (isAdmin) {
         try {
             const flaggedData = await API.getFlagged(State.activeGroup.group_id);
-            /*
-                container.innerHTML = flaggedData.flagged.map(f => {
-                    const isImg = f.message === '[IMAGE]';
-                    const isAud = f.message === '[AUDIO]';
-                    const typeBadge = isImg ? '📷 Image' : isAud ? '🎤 Audio' : '💬 Text';
-                    const displayMsg = isImg
-                        ? (f.summary || 'Image content')
-                        : isAud
-                            ? (f.summary || 'Audio content')
-                            : f.message;
-                    return `
-                    <div class="flagged-item">
-                        <div class="flagged-item-header">
-                            <span class="badge">${typeBadge}</span>
-                            <span>${escapeHtml(f.username)}</span>
-                            <span>${formatTime(f.timestamp)}</span>
-                        </div>
-                        <div class="flagged-item-message">${escapeHtml(displayMsg)}</div>
-                        <div class="flagged-item-reason">${escapeHtml(f.reason)}</div>
-                    </div>`;
-                }).join('');
-            } else {
-                container.innerHTML = '<p class="text-muted" style="padding:12px 0; font-size:13px;">Great! No flagged messages.</p>';
+            const items = flaggedData.success ? flaggedData.flagged : [];
+            const badge = document.getElementById('admin-flagged-badge');
+            const pendingCount = items.filter(f => f.appeal_status === 'PENDING_ADMIN').length;
+            if (badge) {
+                if (pendingCount > 0) {
+                    badge.textContent = pendingCount;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
             }
-            */
-            renderFlaggedList(flaggedData.success ? flaggedData.flagged : [], true);
+
+            renderFlaggedList(items, true);
         } catch (err) {
             console.error('Failed to load flagged:', err);
             renderFlaggedList([], true);
+        }
+    } else {
+        const badge = document.getElementById('admin-flagged-badge');
+        if (badge) {
+            badge.textContent = '';
+            badge.classList.add('hidden');
         }
     }
 
@@ -1355,6 +1360,8 @@ async function openAdminPanel() {
 // ── Moderation Report ────────────────────────────────────────────────────────
 
 async function loadModerationReport(group_id) {
+    return loadModerationPage(group_id);
+
     // Reset to loading state
     ['report-total', 'report-passed', 'report-flagged', 'report-images',
         'report-pass-rate', 'report-flagged-rate'].forEach(id => {
@@ -1466,6 +1473,270 @@ async function loadModerationReport(group_id) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EVENT BINDINGS
 // ═══════════════════════════════════════════════════════════════════════════════
+async function loadModerationPage() {
+    if (!State.activeGroup || !State.user) return;
+
+    const isAdmin = State.activeGroup.admin_username === State.user.username;
+    const group = State.activeGroup;
+
+    const titleEl = document.getElementById('mod-page-title');
+    if (titleEl) titleEl.textContent = isAdmin ? 'Moderation Dashboard' : 'My Moderation';
+    const groupNameEl = document.getElementById('mod-page-group-name');
+    if (groupNameEl) groupNameEl.textContent = group.group_name || '';
+
+    document.getElementById('mod-member-view').classList.toggle('hidden', isAdmin);
+    document.getElementById('mod-admin-view').classList.toggle('hidden', !isAdmin);
+
+    let report = null;
+    try {
+        const data = await API.getModerationReport(group.group_id);
+        if (data.success) report = data.report;
+    } catch (err) {
+        console.error('Failed to load moderation report:', err);
+        showToast('Failed to load moderation data.', 'error');
+        return;
+    }
+    if (!report) return;
+
+    State.memberRiskMap = Object.fromEntries((report.member_activity || []).map(member => [member.username, member]));
+
+    if (isAdmin) {
+        _populateAdminView(report);
+    } else {
+        _populateMemberView(report, group);
+    }
+}
+
+function _populateMemberView(report, group) {
+    const username = State.user.username;
+    const myData = (report.member_activity || []).find(m => m.username === username);
+
+    if (myData) {
+        const scoreEl = document.getElementById('mod-my-score');
+        scoreEl.textContent = myData.trust_score;
+        scoreEl.className = `mod-trust-score-number ${myData.badge}`;
+
+        const badgeLabels = { trusted: 'Trusted', watch: 'Under Watch', warning: 'High Risk' };
+        const labelEl = document.getElementById('mod-my-badge-label');
+        if (labelEl) labelEl.textContent = badgeLabels[myData.badge] || 'Trust Score';
+
+        document.getElementById('mod-my-sent').textContent = myData.sent ?? '--';
+        document.getElementById('mod-my-flagged-count').textContent = myData.flagged ?? '--';
+        const compliance = myData.compliance_rate != null ? myData.compliance_rate + '%' : '--';
+        document.getElementById('mod-my-compliance').textContent = compliance;
+    }
+
+    document.getElementById('mod-grp-pass-rate').textContent = report.pass_rate + '%';
+    setTimeout(() => {
+        document.getElementById('mod-grp-pass-bar').style.width = report.pass_rate + '%';
+    }, 80);
+    document.getElementById('mod-grp-sensitivity').textContent =
+        group.moderation_sensitivity || 'Moderate';
+
+    const myFlagged = (report.flagged_messages || []).filter(m => m.username === username);
+    const listEl = document.getElementById('mod-my-flagged-list');
+    if (myFlagged.length === 0) {
+        listEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No flagged messages - you\'re in good standing.</p>';
+    } else {
+        listEl.innerHTML = myFlagged.map(f => _buildFlaggedItem(f, false)).join('');
+        _bindFlaggedItemEvents(listEl);
+    }
+}
+
+function _populateAdminView(report) {
+    document.getElementById('mds-total').textContent = report.total_messages ?? '--';
+    document.getElementById('mds-passed').textContent = report.pass_count ?? '--';
+    document.getElementById('mds-flagged').textContent = report.flagged_count ?? '--';
+    document.getElementById('mds-text').textContent = report.text_count ?? '--';
+    document.getElementById('mds-images').textContent = report.image_count ?? '--';
+    document.getElementById('mds-audios').textContent = report.audio_count ?? '--';
+
+    document.getElementById('mds-pass-rate').textContent = report.pass_rate + '%';
+    document.getElementById('mds-flag-rate').textContent = report.flagged_rate + '%';
+    setTimeout(() => {
+        document.getElementById('mds-bar-pass').style.width = report.pass_rate + '%';
+        document.getElementById('mds-bar-flag').style.width = report.flagged_rate + '%';
+    }, 80);
+
+    _renderTrendChart(report.trend_points || []);
+    _renderReasons(report.flagged_reasons || []);
+    _renderMemberTable(report.member_activity || []);
+
+    const flaggedLogEl = document.getElementById('mds-flagged-log');
+    const flaggedItems = report.flagged_messages || [];
+    const pendingCount = flaggedItems.filter(f =>
+        String(f.appeal_status || '').toUpperCase() === 'PENDING_ADMIN'
+    ).length;
+    const pendingBadge = document.getElementById('mds-pending-badge');
+    if (pendingBadge) {
+        pendingBadge.textContent = pendingCount;
+        pendingBadge.classList.toggle('hidden', pendingCount === 0);
+    }
+
+    if (flaggedItems.length === 0) {
+        flaggedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No flagged messages.</p>';
+    } else {
+        flaggedLogEl.innerHTML = flaggedItems.map(f => _buildFlaggedItem(f, true)).join('');
+        _bindFlaggedItemEvents(flaggedLogEl);
+    }
+}
+
+function _renderTrendChart(trendPoints) {
+    const el = document.getElementById('mds-trend');
+    if (!trendPoints.length) {
+        el.innerHTML = '<p class="text-muted" style="font-size:13px;">No trend data yet.</p>';
+        return;
+    }
+
+    const maxVal = Math.max(...trendPoints.map(p => (p.passed || 0) + (p.flagged || 0)), 1);
+
+    el.innerHTML = trendPoints.map(p => {
+        const passHeight = Math.round(((p.passed || 0) / maxVal) * 68);
+        const flagHeight = Math.round(((p.flagged || 0) / maxVal) * 68);
+        const dateLabel = (p.date || '').slice(5);
+
+        return `<div class="mod-trend-bar-group" title="${p.date}: ${p.passed} passed, ${p.flagged} flagged">
+            <div class="mod-trend-bars">
+                <div class="mod-trend-bar pass" style="height:${passHeight}px"></div>
+                <div class="mod-trend-bar flag" style="height:${flagHeight}px"></div>
+            </div>
+            <div class="mod-trend-date">${dateLabel}</div>
+        </div>`;
+    }).join('');
+}
+
+function _renderReasons(reasons) {
+    const el = document.getElementById('mds-reasons');
+    if (!reasons.length) {
+        el.innerHTML = '<p class="text-muted" style="font-size:13px;">No violations recorded.</p>';
+        return;
+    }
+    const maxCount = reasons[0].count || 1;
+    el.innerHTML = reasons.map(r => {
+        const pct = Math.round((r.count / maxCount) * 100);
+        return `<div class="mod-reason-row">
+            <span class="mod-reason-label" title="${escapeHtml(r.reason)}">${escapeHtml(r.reason)}</span>
+            <div class="mod-reason-bar-wrap">
+                <div class="mod-reason-bar" style="width:${pct}%"></div>
+            </div>
+            <span class="mod-reason-count">${r.count}</span>
+        </div>`;
+    }).join('');
+}
+
+function _renderMemberTable(members) {
+    const el = document.getElementById('mds-members');
+    if (!members.length) {
+        el.innerHTML = '<p class="text-muted" style="font-size:13px;">No activity yet.</p>';
+        return;
+    }
+    el.innerHTML = `<table class="mod-member-table">
+        <thead>
+            <tr>
+                <th>Member</th>
+                <th>Trust</th>
+                <th>Sent</th>
+                <th>Flagged</th>
+                <th>Compliance</th>
+            </tr>
+        </thead>
+        <tbody>
+            ${members.map(m => `
+            <tr class="mod-row-${m.badge}">
+                <td>${escapeHtml(m.username)}</td>
+                <td><span class="trust-pill ${m.badge}">${m.trust_score}</span></td>
+                <td>${m.sent}</td>
+                <td style="color:var(--danger)">${m.flagged}</td>
+                <td>${m.compliance_rate != null ? m.compliance_rate + '%' : '--'}</td>
+            </tr>`).join('')}
+        </tbody>
+    </table>`;
+}
+
+function _buildFlaggedItem(f, isAdmin) {
+    const isImg = String(f.message || '').startsWith('[IMAGE]');
+    const isAud = String(f.message || '').startsWith('[AUDIO]');
+    const typeLabel = isImg ? 'Image' : isAud ? 'Audio' : 'Text';
+    const display = isImg
+        ? (f.display || f.summary || 'Image content')
+        : isAud
+            ? (f.display || f.summary || 'Audio content')
+            : (f.display || f.message || '');
+
+    const appealStatus = String(f.appeal_status || '').toUpperCase();
+    const hasPendingAppeal = appealStatus === 'PENDING_ADMIN';
+    const hasAppeal = !!f.appeal_text;
+
+    let appealSection = '';
+    if (hasAppeal) {
+        appealSection = `<div class="mod-flagged-appeal-info">
+            <strong>Appeal:</strong> ${escapeHtml(f.appeal_text)}<br>
+            <strong>AI re-check:</strong> ${escapeHtml(f.appeal_ai_status || 'Pending')}
+            ${f.appeal_ai_reason ? ' - ' + escapeHtml(f.appeal_ai_reason) : ''}
+        </div>`;
+    }
+
+    let actionSection = '';
+    if (isAdmin && hasPendingAppeal) {
+        actionSection = `<div class="mod-appeal-actions">
+            <button class="btn btn-primary btn-sm"
+                data-appeal-decision="approve"
+                data-message-id="${escapeHtml(f.message_id)}"
+                type="button">Approve Appeal</button>
+            <button class="btn btn-secondary btn-sm"
+                data-appeal-decision="reject"
+                data-message-id="${escapeHtml(f.message_id)}"
+                type="button">Reject Appeal</button>
+        </div>`;
+    }
+
+    const canAppeal = !isAdmin
+        && f.username === State.user?.username
+        && !hasAppeal;
+    if (canAppeal) {
+        actionSection = `<div class="mod-appeal-actions">
+            <button class="btn btn-secondary btn-sm"
+                data-open-appeal="true"
+                data-message-id="${escapeHtml(f.message_id)}"
+                data-message-text="${escapeHtml(display)}"
+                data-reason="${escapeHtml(f.reason || '')}"
+                type="button">Appeal this</button>
+        </div>`;
+    }
+
+    return `<div class="mod-flagged-item">
+        <div class="mod-flagged-header">
+            <span class="mod-flagged-user">${escapeHtml(f.username)}</span>
+            <span class="mod-flagged-type-badge">${typeLabel}</span>
+            ${appealStatus === 'PENDING_ADMIN' ? '<span class="mod-flagged-type-badge" style="color:var(--warning);">Pending review</span>' : ''}
+            ${appealStatus === 'APPROVED' ? '<span class="mod-flagged-type-badge" style="color:var(--success);">Approved</span>' : ''}
+            ${appealStatus === 'REJECTED' ? '<span class="mod-flagged-type-badge" style="color:var(--danger);">Rejected</span>' : ''}
+            <span class="mod-flagged-time">${formatTime(f.timestamp)}</span>
+        </div>
+        <div class="mod-flagged-message">${escapeHtml(display)}</div>
+        <div class="mod-flagged-reason">${escapeHtml(f.reason || '')}</div>
+        ${appealSection}
+        ${actionSection}
+    </div>`;
+}
+
+function _bindFlaggedItemEvents(container) {
+    container.querySelectorAll('[data-appeal-decision]').forEach(btn => {
+        btn.addEventListener('click', () =>
+            reviewAppeal(btn.dataset.messageId, btn.dataset.appealDecision)
+        );
+    });
+    container.querySelectorAll('[data-open-appeal]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            openAppealModal({
+                message_id: btn.dataset.messageId,
+                message: btn.dataset.messageText,
+                reason: btn.dataset.reason,
+            });
+        });
+    });
+}
+
 function initEventBindings() {
     document.getElementById('btn-new-chat').addEventListener('click', () => openModal('modal-group'));
     document.getElementById('btn-catchup').addEventListener('click', openCatchUpModal);
@@ -1533,6 +1804,10 @@ function initEventBindings() {
     });
 
     document.getElementById('btn-admin-panel').addEventListener('click', openAdminPanel);
+    document.getElementById('btn-moderation-page-nav').addEventListener('click', () => {
+        if (!State.activeGroup) return;
+        navigateTo('moderation');
+    });
     document.getElementById('btn-copy-group-id').addEventListener('click', async () => {
         const groupId = document.getElementById('admin-group-id').textContent.trim();
         if (!groupId) return;
@@ -1579,7 +1854,6 @@ function initEventBindings() {
     document.getElementById('create-rules').addEventListener('input', (e) => {
         if (!e.target.value.trim()) {
             setRuleSuggestionVisibility('create', false);
-            document.getElementById('create-rule-preview').value = '';
             document.getElementById('create-rule-suggestions').innerHTML = '<p class="text-muted">AI suggestions will appear here.</p>';
             return;
         }
@@ -1601,6 +1875,42 @@ function initEventBindings() {
 
     document.getElementById('search-groups').addEventListener('input', (e) => {
         renderGroupList(e.target.value);
+    });
+
+    document.getElementById('btn-mod-back').addEventListener('click', () => {
+        navigateTo('chat');
+        if (State.activeGroupId) startPolling();
+    });
+
+    document.getElementById('btn-mod-refresh').addEventListener('click', () => {
+        loadModerationPage();
+    });
+
+    document.getElementById('btn-open-mod-page').addEventListener('click', () => {
+        closeModal('modal-admin');
+        navigateTo('moderation');
+    });
+
+    document.getElementById('btn-save-sensitivity').addEventListener('click', async () => {
+        if (!State.activeGroup || !State.user) return;
+        const sensitivity = document.getElementById('admin-sensitivity').value;
+        const currentRules = State.activeGroup.rules || '';
+        try {
+            const data = await API.updateRules(
+                State.activeGroup.group_id,
+                currentRules,
+                State.user.username,
+                sensitivity
+            );
+            if (data.success) {
+                State.activeGroup.moderation_sensitivity = sensitivity;
+                showToast('Sensitivity saved.', 'success');
+            } else {
+                showToast(data.message || 'Failed to save.', 'error');
+            }
+        } catch (err) {
+            showToast('Connection error.', 'error');
+        }
     });
 }
 

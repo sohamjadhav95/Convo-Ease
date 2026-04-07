@@ -202,10 +202,17 @@
                                 <path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8L18 14z"></path>
                             </svg>
                         </button>
-                        <button class="btn-icon" id="btn-admin-panel" title="Admin Panel">
+                        <button class="btn-icon hidden" id="btn-admin-panel" title="Admin Panel">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                        </button>
+                        <button class="btn-icon hidden" id="btn-moderation-page-nav" title="Moderation">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M3 3v18h18"></path>
+                                <path d="M7 15l4-4 3 3 5-6"></path>
                             </svg>
                         </button>
                     </div>
@@ -370,6 +377,150 @@
          MODALS
          ════════════════════════════════════════════════════════════════════ -->
 
+    <!-- MODERATION PAGE -->
+    <div id="page-moderation" class="page">
+        <div class="mod-page">
+            <div class="mod-page-header">
+                <button class="btn-icon" id="btn-mod-back">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="mod-page-title-block">
+                    <h2 id="mod-page-title">Moderation</h2>
+                    <span id="mod-page-group-name" class="mod-page-group-name"></span>
+                </div>
+                <button class="btn-icon" id="btn-mod-refresh" title="Refresh data">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                </button>
+            </div>
+
+            <div class="mod-page-body">
+                <div id="mod-member-view" class="mod-view hidden">
+                    <div class="mod-trust-hero">
+                        <div class="mod-trust-score-block">
+                            <div id="mod-my-score" class="mod-trust-score-number">--</div>
+                            <div id="mod-my-badge-label" class="mod-trust-badge-label">Trust Score</div>
+                        </div>
+                        <div class="mod-trust-mini-stats">
+                            <div class="mod-mini-stat">
+                                <span id="mod-my-sent" class="mod-mini-val">--</span>
+                                <span class="mod-mini-lbl">Sent</span>
+                            </div>
+                            <div class="mod-mini-stat">
+                                <span id="mod-my-flagged-count" class="mod-mini-val mod-val-danger">--</span>
+                                <span class="mod-mini-lbl">Flagged</span>
+                            </div>
+                            <div class="mod-mini-stat">
+                                <span id="mod-my-compliance" class="mod-mini-val mod-val-success">--</span>
+                                <span class="mod-mini-lbl">Compliance</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mod-card">
+                        <div class="mod-card-title">Group Health</div>
+                        <div class="mod-rate-row">
+                            <span class="mod-rate-label">Pass rate</span>
+                            <span id="mod-grp-pass-rate" class="mod-rate-value mod-val-success">--</span>
+                        </div>
+                        <div class="mod-bar-track">
+                            <div class="mod-bar-fill mod-fill-pass" id="mod-grp-pass-bar" style="width:0%"></div>
+                        </div>
+                        <div class="mod-rate-row" style="margin-top:10px;">
+                            <span class="mod-rate-label">Moderation level</span>
+                            <span id="mod-grp-sensitivity" class="mod-rate-value">--</span>
+                        </div>
+                    </div>
+
+                    <div class="mod-card">
+                        <div class="mod-card-title">My Flagged Messages</div>
+                        <div id="mod-my-flagged-list" class="mod-flagged-list">
+                            <p class="text-muted" style="font-size:13px;">No flagged messages - you're in good standing.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="mod-admin-view" class="mod-view hidden">
+                    <div class="mod-stats-grid">
+                        <div class="mod-stat-card">
+                            <div id="mds-total" class="mod-stat-val">--</div>
+                            <div class="mod-stat-lbl">Total</div>
+                        </div>
+                        <div class="mod-stat-card mod-card-pass">
+                            <div id="mds-passed" class="mod-stat-val">--</div>
+                            <div class="mod-stat-lbl">Passed</div>
+                        </div>
+                        <div class="mod-stat-card mod-card-danger">
+                            <div id="mds-flagged" class="mod-stat-val">--</div>
+                            <div class="mod-stat-lbl">Flagged</div>
+                        </div>
+                        <div class="mod-stat-card">
+                            <div id="mds-text" class="mod-stat-val">--</div>
+                            <div class="mod-stat-lbl">Text msgs</div>
+                        </div>
+                        <div class="mod-stat-card mod-card-accent">
+                            <div id="mds-images" class="mod-stat-val">--</div>
+                            <div class="mod-stat-lbl">Images</div>
+                        </div>
+                        <div class="mod-stat-card mod-card-accent2">
+                            <div id="mds-audios" class="mod-stat-val">--</div>
+                            <div class="mod-stat-lbl">Audios</div>
+                        </div>
+                    </div>
+
+                    <div class="mod-card">
+                        <div class="mod-card-title">Moderation Rates</div>
+                        <div class="mod-rate-row">
+                            <span class="mod-rate-label">Pass rate</span>
+                            <span id="mds-pass-rate" class="mod-rate-value mod-val-success">--</span>
+                        </div>
+                        <div class="mod-bar-track">
+                            <div class="mod-bar-fill mod-fill-pass" id="mds-bar-pass" style="width:0%"></div>
+                        </div>
+                        <div class="mod-rate-row" style="margin-top:10px;">
+                            <span class="mod-rate-label">Flag rate</span>
+                            <span id="mds-flag-rate" class="mod-rate-value mod-val-danger">--</span>
+                        </div>
+                        <div class="mod-bar-track">
+                            <div class="mod-bar-fill mod-fill-danger" id="mds-bar-flag" style="width:0%"></div>
+                        </div>
+                    </div>
+
+                    <div class="mod-two-col">
+                        <div class="mod-card">
+                            <div class="mod-card-title">Activity Trend <span class="mod-card-subtitle">last 10 days</span></div>
+                            <div id="mds-trend" class="mod-trend-chart">
+                                <p class="text-muted" style="font-size:13px;">No data yet.</p>
+                            </div>
+                        </div>
+                        <div class="mod-card">
+                            <div class="mod-card-title">Top Flag Reasons</div>
+                            <div id="mds-reasons" class="mod-reasons-list">
+                                <p class="text-muted" style="font-size:13px;">No violations recorded.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mod-card">
+                        <div class="mod-card-title">Member Trust</div>
+                        <div id="mds-members" class="mod-member-wrap">
+                            <p class="text-muted" style="font-size:13px;">No activity yet.</p>
+                        </div>
+                    </div>
+
+                    <div class="mod-card">
+                        <div class="mod-card-title">
+                            Flagged Messages
+                            <span id="mds-pending-badge" class="mod-pending-badge hidden"></span>
+                        </div>
+                        <div id="mds-flagged-log" class="mod-flagged-list">
+                            <p class="text-muted" style="font-size:13px;">No flagged messages.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Create/Join Group Modal -->
     <div id="modal-group" class="modal-overlay hidden">
         <div class="modal">
@@ -416,8 +567,6 @@
                 <div id="create-rule-suggestions" class="rule-suggestions-panel hidden">
                     <p class="text-muted">AI suggestions will appear here.</p>
                 </div>
-                <textarea id="create-rule-preview" rows="4" class="rule-preview hidden"
-                    placeholder="AI-improved rule draft will appear here..."></textarea>
                 <button type="submit" class="btn btn-primary btn-full">Create Group</button>
                 <div id="create-group-error" class="auth-error hidden"></div>
             </form>
@@ -439,166 +588,89 @@
         </div>
     </div>
 
-    <!-- Admin Panel Modal -->
+    <!-- Admin Quick Panel Modal -->
     <div id="modal-admin" class="modal-overlay hidden">
-        <div class="modal modal-large">
+        <div class="modal modal-admin-quick">
             <div class="modal-header">
-                <h3 id="admin-panel-title">Admin Panel</h3>
-                <button class="btn-icon modal-close" data-modal="modal-admin">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
+                <h3 id="admin-panel-title">Group Panel</h3>
+                <div class="modal-header-actions">
+                    <button class="btn btn-secondary btn-sm" id="btn-open-mod-page" style="display:none;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        Dashboard
+                    </button>
+                    <button class="btn-icon modal-close" data-modal="modal-admin">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-tabs modal-tabs-flush">
+                <button class="modal-tab active" data-admin-tab="info">Group</button>
+                <button class="modal-tab" data-admin-tab="rules">Rules</button>
+                <button class="modal-tab" id="admin-tab-btn-flagged" data-admin-tab="flagged" data-admin-only="true">
+                    Flagged
+                    <span id="admin-flagged-badge" class="mod-tab-badge hidden"></span>
                 </button>
             </div>
 
-            <!-- Admin Tabs -->
-            <div class="modal-tabs" style="margin: 0; padding: 12px 20px 0;">
-                <button class="modal-tab active" data-admin-tab="rules">Rules</button>
-                <button class="modal-tab" data-admin-tab="flagged" data-admin-only="true">Flagged</button>
-                <button class="modal-tab" data-admin-tab="report" data-admin-only="true">Report</button>
-            </div>
-
-            <!-- Tab: Rules -->
-            <div id="admin-tab-rules" class="modal-body admin-tab-content active">
-                <div class="admin-section">
-                    <h4>Group Info</h4>
-                    <div class="setting-row">
-                        <span class="setting-label">Group ID</span>
+            <div id="admin-tab-info" class="modal-body admin-tab-content" style="display:block;">
+                <div class="admin-info-list">
+                    <div class="admin-info-row">
+                        <span class="admin-info-label">Group ID</span>
                         <div class="admin-group-id-row">
                             <span id="admin-group-id" class="setting-value badge"></span>
-                            <button class="btn-icon" id="btn-copy-group-id" type="button" title="Copy Group ID" aria-label="Copy Group ID">
-                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                    <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                </svg>
+                            <button class="btn-icon" id="btn-copy-group-id" type="button" title="Copy Group ID">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                             </button>
                         </div>
                     </div>
-                    <div class="setting-row">
-                        <span class="setting-label">Members</span>
-                        <span id="admin-members" class="setting-value"></span>
+                    <div class="admin-info-row">
+                        <span class="admin-info-label">Members</span>
+                        <div id="admin-members" class="admin-members-chips"></div>
+                    </div>
+                    <div class="admin-info-row" id="admin-my-trust-row" style="display:none;">
+                        <span class="admin-info-label">Your trust</span>
+                        <span id="admin-my-trust-pill" class="trust-pill">--</span>
                     </div>
                 </div>
-                <div class="admin-section">
-                    <h4>Moderation Rules</h4>
-                    <textarea id="admin-rules" rows="4" placeholder="Enter rules..."></textarea>
-                    <div class="input-group" style="margin-top: 12px;">
-                        <label for="admin-sensitivity">Moderation Sensitivity</label>
-                        <select id="admin-sensitivity">
+
+                <div id="admin-sensitivity-block" class="admin-sensitivity-block" style="display:none;">
+                    <div class="admin-info-label" style="margin-bottom:6px;">Moderation Sensitivity</div>
+                    <div class="admin-sensitivity-row">
+                        <select id="admin-sensitivity" class="admin-select">
                             <option value="Strict">Strict</option>
                             <option value="Moderate">Moderate</option>
                             <option value="Relaxed">Relaxed</option>
                         </select>
+                        <button class="btn btn-primary btn-sm" id="btn-save-sensitivity">Save</button>
                     </div>
-                    <div class="rules-tools">
-                        <button class="btn btn-secondary" id="btn-suggest-admin-rules" type="button">Suggest Improvements</button>
-                    </div>
-                    <div id="admin-rule-suggestions" class="rule-suggestions-panel hidden">
-                        <p class="text-muted">AI suggestions will appear here.</p>
-                    </div>
-                    <textarea id="admin-rule-preview" rows="4" class="rule-preview hidden"
-                        placeholder="AI-improved rule draft will appear here..."></textarea>
-                    <button class="btn btn-primary" id="btn-save-rules" style="margin-top: 10px;">Save Rules</button>
                 </div>
             </div>
 
-            <!-- Tab: Flagged Messages -->
-            <div id="admin-tab-flagged" class="modal-body admin-tab-content" style="display:none">
+            <div id="admin-tab-rules" class="modal-body admin-tab-content" style="display:none;">
                 <div class="admin-section">
-                    <h4>Flagged Messages</h4>
-                    <p class="text-muted" style="font-size:12px; margin-bottom:12px;">Add an optional admin note before approving or rejecting an appeal.</p>
+                    <textarea id="admin-rules" rows="5" placeholder="Group rules..."></textarea>
+                    <div id="admin-rules-actions" style="display:none;">
+                        <div class="rules-tools">
+                            <button class="btn btn-secondary btn-sm" id="btn-suggest-admin-rules" type="button">AI Suggest</button>
+                        </div>
+                        <div id="admin-rule-suggestions" class="rule-suggestions-panel hidden"></div>
+                        <textarea id="admin-rule-preview" rows="4" class="rule-preview hidden" placeholder="AI-improved rules will appear here..."></textarea>
+                        <button class="btn btn-primary btn-sm" id="btn-save-rules" style="margin-top:10px;">Save Rules</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="admin-tab-flagged" class="modal-body admin-tab-content" style="display:none;">
+                <div class="admin-section">
+                    <p class="text-muted" style="font-size:12px; margin-bottom:12px;">
+                        Add an optional note before approving or rejecting an appeal.
+                    </p>
                     <div id="flagged-list" class="flagged-list">
                         <p class="text-muted">No flagged messages.</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab: Moderation Report -->
-            <div id="admin-tab-report" class="modal-body admin-tab-content" style="display:none">
-                <div class="admin-section">
-                    <!-- Stat Cards -->
-                    <div class="report-grid">
-                        <div class="report-stat-card">
-                            <div class="stat-value" id="report-total">--</div>
-                            <div class="stat-label">Total Attempts</div>
-                        </div>
-                        <div class="report-stat-card pass">
-                            <div class="stat-value" id="report-passed">--</div>
-                            <div class="stat-label">Passed</div>
-                        </div>
-                        <div class="report-stat-card danger">
-                            <div class="stat-value" id="report-flagged">--</div>
-                            <div class="stat-label">Flagged</div>
-                        </div>
-                        <div class="report-stat-card accent">
-                            <div class="stat-value" id="report-images">--</div>
-                            <div class="stat-label">Images</div>
-                        </div>
-                        <div class="report-stat-card" style="border-color:var(--accent-light)">
-                            <div class="stat-value" id="report-audios" style="color:var(--accent-light)">--</div>
-                            <div class="stat-label">Audios</div>
-                        </div>
-                    </div>
-
-                    <!-- Pass Rate Bar -->
-                    <div style="margin: 16px 0 8px;">
-                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
-                            <span style="color:var(--text-secondary)">Pass Rate</span>
-                            <span id="report-pass-rate" style="font-weight:600; color:var(--success)">--</span>
-                        </div>
-                        <div class="report-bar-track">
-                            <div class="report-bar-fill pass" id="report-bar-pass" style="width:0%"></div>
-                        </div>
-                    </div>
-                    <div style="margin-bottom: 16px;">
-                        <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:4px;">
-                            <span style="color:var(--text-secondary)">Flagged Rate</span>
-                            <span id="report-flagged-rate" style="font-weight:600; color:var(--danger)">--</span>
-                        </div>
-                        <div class="report-bar-track">
-                            <div class="report-bar-fill danger" id="report-bar-flag" style="width:0%"></div>
-                        </div>
-                    </div>
-
-                    <!-- Member Activity Table -->
-                    <h4>Member Activity</h4>
-                    <div id="report-member-table" class="report-member-table">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
-                    </div>
-
-                    <!-- Top Flagged Reasons -->
-                    <h4 style="margin-top:16px;">Top Flag Reasons</h4>
-                    <div id="report-reasons" class="report-reasons">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
-                    </div>
-
-                    <h4 style="margin-top:16px;">Flag Categories</h4>
-                    <div id="report-categories" class="report-reasons">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
-                    </div>
-
-                    <h4 style="margin-top:16px;">Moderation Trends</h4>
-                    <div id="report-trends" class="trend-grid">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
-                    </div>
-
-                    <h4 style="margin-top:16px;">Member Trust Heatmap</h4>
-                    <div id="report-heatmap" class="heatmap-grid">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
-                    </div>
-
-                    <!-- Passed Messages Log -->
-                    <h4 style="margin-top:20px;">Passed Messages <span
-                            style="font-weight:400;color:var(--success);font-size:11px;">(recent 20)</span></h4>
-                    <div id="report-passed-log" class="report-msg-log">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
-                    </div>
-
-                    <!-- Flagged Messages Log -->
-                    <h4 style="margin-top:20px;">Flagged Messages</h4>
-                    <div id="report-flagged-log" class="report-msg-log">
-                        <p class="text-muted" style="font-size:13px;">No data yet.</p>
                     </div>
                 </div>
             </div>
