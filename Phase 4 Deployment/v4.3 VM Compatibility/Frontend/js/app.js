@@ -627,7 +627,7 @@ function renderMessages(autoScroll = false) {
                     <div class="msg-image-wrapper">
                         <img class="msg-image" src="${imgSrc}" alt="Shared image" loading="lazy">
                     </div>
-                    ${inlineSummary ? `<div class="msg-image-caption">🤖 ${escapeHtml(inlineSummary)}</div>` : ''}`;
+                    ${inlineSummary ? `<div class="msg-image-caption">${escapeHtml(inlineSummary)}</div>` : ''}`;
             } else {
                 bubbleContent = `
                     <div class="msg-image-indicator">

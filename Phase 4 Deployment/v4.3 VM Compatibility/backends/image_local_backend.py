@@ -10,11 +10,49 @@ from transformers import AutoModelForCausalLM, AutoProcessor
 from .base import ImageBackend
 
 MODERATION_PROMPT = (
-    "Describe this image in detail for content moderation. "
-    "Include all visible people and actions, any objects, "
-    "any text visible, and identify any harmful, offensive, "
-    "or inappropriate content."
+    "Describe the image in plain text only. "
+    "Use 1 or 2 short sentences maximum. "
+    "Do not use markdown, bullets, labels, headings, or emoji. "
+    "Mention only the most important visible content."
 )
+
+
+def _normalize_summary(text: str) -> str:
+    content = str(text or "").strip()
+    if not content:
+        return ""
+
+    replacements = {
+        "\r": " ",
+        "\n": " ",
+        "**": "",
+        "__": "",
+        "`": "",
+        "*": "",
+        "#": "",
+        ">": "",
+    }
+    for old, new in replacements.items():
+        content = content.replace(old, new)
+
+    content = " ".join(content.split()).strip(" -:;,.")
+    if not content:
+        return ""
+
+    sentences = []
+    current = ""
+    for char in content:
+        current += char
+        if char in ".!?":
+            sentences.append(current.strip())
+            current = ""
+            if len(sentences) == 2:
+                break
+    if current.strip() and len(sentences) < 2:
+        sentences.append(current.strip())
+
+    summary = " ".join(sentence.strip() for sentence in sentences if sentence.strip()).strip()
+    return summary[:220].rstrip(" ,;:-")
 
 
 class LocalImageBackend(ImageBackend):
@@ -123,9 +161,9 @@ class LocalImageBackend(ImageBackend):
             with torch.no_grad():
                 outputs = self._model.generate(
                     **inputs,
-                    max_new_tokens=256,
+                    max_new_tokens=120,
                     do_sample=True,
-                    temperature=0.7,
+                    temperature=0.2,
                     top_p=0.9,
                     pad_token_id=self._processor.tokenizer.eos_token_id,
                 )
@@ -139,12 +177,14 @@ class LocalImageBackend(ImageBackend):
             with torch.no_grad():
                 outputs = self._model.generate(
                     **inputs,
-                    max_new_tokens=256,
+                    max_new_tokens=120,
                     do_sample=True,
-                    temperature=0.7,
+                    temperature=0.2,
                     top_p=0.9,
                     pad_token_id=self._processor.tokenizer.eos_token_id,
                 )
 
         new_tokens = outputs[0][inputs["input_ids"].shape[-1]:]
-        return self._processor.decode(new_tokens, skip_special_tokens=True).strip()
+        return _normalize_summary(
+            self._processor.decode(new_tokens, skip_special_tokens=True).strip()
+        )
