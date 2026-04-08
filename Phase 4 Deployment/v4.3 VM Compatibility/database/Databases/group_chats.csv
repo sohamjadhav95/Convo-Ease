@@ -1,0 +1,85 @@
+message_id,group_id,username,message,status,reason,summary,media_url,group_rules,timestamp,initial_status,initial_reason,detected_language,language_confidence,translated_message,appeal_status,appeal_text,appeal_ai_status,appeal_ai_reason,appeal_submitted_at,appeal_reviewed_by,appeal_reviewed_at,appeal_admin_note
+55fcb7b3-bb24-4dcf-bf26-95b6e1159daf,27D9DD,rahul_k,Can someone share notes from today's lecture on binary trees?,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:36,PASS,,en,1.0,Can someone share notes from today's lecture on binary trees?,,,,,,,,
+7849022f-b39b-4ee6-b3de-b341051dd971,27D9DD,sneha_more,"I think the answer to Q3 is O(n log n), here is my working...",PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:37,PASS,,en,0.86,"I think the answer to Q3 is O(n log n), here is my working...",,,,,,,,
+99b92107-613f-4282-8e71-4565b02bf57d,27D9DD,neha_k,Aaj ki class mein kya cover hua? I missed it.,FLAGGED,"<Language violation: message is in Hindi, but only English or Marathi are allowed.>",,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:37,FLAGGED,"<Language violation: message is in Hindi, but only English or Marathi are allowed.>",en,0.43,Aaj ki class mein kya cover hua? I missed it.,,,,,,,,
+8add9e95-e8e6-40bb-a4e5-f13b4a324b86,27D9DD,rahul_k,Chapter 5 practice problems are up on the portal.,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:38,PASS,,en,1.0,Chapter 5 practice problems are up on the portal.,,,,,,,,
+038e2399-67f0-435a-8584-0d25168dfef7,27D9DD,sneha_more,Bhai exam ka paper mil sakta hai kya? 500 rupees dunga.,FLAGGED,<Violates rules: request for exam paper (pirated material) and uses Hindi instead of English or Marathi>,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:41,FLAGGED,<Violates rules: request for exam paper (pirated material) and uses Hindi instead of English or Marathi>,id,1.0,"Brother, can I get the exam paper? 500 rupees dunga.",,,,,,,,
+7aa75483-f2f0-4dc3-ac27-0b5c2523d757,27D9DD,neha_k,Anyone want to watch IPL tonight? Totally off topic I know lol,FLAGGED,Off-topic discussion (promoting non‑academic content),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:44,FLAGGED,Off-topic discussion (promoting non‑academic content),en,1.0,Anyone want to watch IPL tonight? Totally off topic I know lol,,,,,,,,
+c5dc64ea-a55e-44d1-9754-2848294e6a1f,27D9DD,rahul_k,"You're so dumb, how did you even pass last semester?",FLAGGED,Personal attack / abusive language.,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:46,FLAGGED,Personal attack / abusive language.,fr,0.71,"You're so dumb, how did you even pass last semester?",,,,,,,,
+b8e88933-66f9-45f3-8610-ae00519fe88f,27D9DD,sneha_more,Check this out: free-notes-pirated.xyz — has all textbooks,FLAGGED,Sharing pirated study material (promotes a pirated website),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:47,FLAGGED,Sharing pirated study material (promotes a pirated website),en,1.0,Check this out: free-notes-pirated.xyz — has all textbooks,,,,,,,,
+42e5ca5b-9cc1-4233-8861-96c5427b1cef,27D9DD,rahul_k,yes,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:09:30,PASS,,tr,1.0,yes,,,,,,,,
+6e20bca9-dbbe-4d72-bd78-1095d8781559,27D9DD,sneha_more,This group is full of idiots,PASS,Context accepted during testing.,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:09:42,FLAGGED,abusive language / personal attack,en,1.0,This group is full of idiots,APPROVED,This message was misunderstood — providing context.,FLAGGED,Violates Rule 2: contains abusive language/personal attack (“idiots”).,2026-04-07 13:09:48,arjun_sharma,2026-04-07 13:09:48,Context accepted during testing.
+c7a45d29-41dd-4b57-9c75-e2750f3f8be7,743BDA,vikram_d,Arey yaar chill kar,FLAGGED,"Off-topic: message does not stay on tech topics (coding, tools, industry news).",,,"1. Stay on tech topics — coding, tools, industry news
+2. No hate speech or discrimination
+3. No self-promotion without permission
+4. Mild language acceptable but no targeted abuse",2026-04-07 13:09:52,FLAGGED,"Off-topic: message does not stay on tech topics (coding, tools, industry news).",so,1.0,Hey friend chill out,,,,,,,,
+9da5820e-a6fc-4be9-9a57-38e09d32637a,27D9DD,sneha_more,And this is real,FLAGGED,Off-topic content (not related to academic discussion),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:01:20,FLAGGED,Off-topic content (not related to academic discussion),en,1.0,And this is real,,,,,,,,
+99ab1538-4149-4641-8c24-fddbcf7821bf,27D9DD,sneha_more,Someone plese Send the nvidia-nim architecture diagram,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:01:49,PASS,,en,1.0,Someone plese Send the nvidia-nim architecture diagram,,,,,,,,
+5bdaf874-1b92-477f-9991-631054fad4a0,27D9DD,sneha_more,See I have raw diagram but I want detailed one,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:02:17,PASS,,en,1.0,See I have raw diagram but I want detailed one,,,,,,,,
+6d7ba429-d0bc-4da5-9c21-944024498f61,27D9DD,sneha_more,[IMAGE],PASS,,"The image presents a flowchart illustrating the process of creating an audio/video streaming application using NVIDIA's Riva and ACE Agent technologies. The chart outlines the steps involved in generating text responses to user input, including audio and video streaming, 3D animation pipeline, and feedback data.
+
+**Key Components:**
+
+* **User Input:** Audio and video streams are input into the system.
+* **NVIDIA Riva ASR:** Speech recognition technology is used to transcribe audio into text.
+* **NVIDIA Riva TTS:** Text-to-speech technology is used to generate audio responses.
+* **3D Animation Pipeline:** A pipeline for creating 3D animations is integrated into the system.
+* **Feedback Data:** Feedback data is collected and used to improve the system's performance.
+
+**Overall:** The flowchart provides a clear overview of the technical components involved in creating an interactive audio/video streaming application using NVIDIA's Riva and ACE Agent technologies.",/media/image/3dc7a79a-ff5c-45cf-9279-ee9ed8cfa19e.png,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:03:32,PASS,,,,,,,,,,,,

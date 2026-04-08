@@ -1,0 +1,111 @@
+================================================================================
+CONVOEASE AUTOMATED TEST RESULTS
+Run date    : 2026-04-07 13:08:31
+Duration    : 81.3 seconds
+Tester      : automated_test.py (Flask test client, real AI)
+================================================================================
+
+SETUP PHASE
+--------------------------------------------------------------------------------
+  S1     PASS   register all users
+  S2     PASS   create Study Circle (id=27D9DD)
+  S3     PASS   add members to Study Circle
+  S4     PASS   create Tech Talk (id=743BDA)
+  S5     PASS   add members to Tech Talk
+  S6     PASS   create Friends Hangout (id=AD527B)
+  S7     PASS   add members to Friends Hangout
+
+TEXT MODERATION
+--------------------------------------------------------------------------------
+  ID     Group          Expected   Actual     Result   Note
+  ------ -------------- ---------- ---------- -------- ----
+  T01    study          PASS       PASS       CORRECT  
+  T02    study          PASS       PASS       CORRECT  
+  T03    study          PASS       FLAGGED    WRONG    <Language violation: message is in Hindi, but only
+  T04    study          PASS       PASS       CORRECT  
+  T05    study          FLAGGED    FLAGGED    CORRECT  <Violates rules: request for exam paper (pirated m
+  T06    study          FLAGGED    FLAGGED    CORRECT  Off-topic discussion (promoting non‑academic conte
+  T07    study          FLAGGED    FLAGGED    CORRECT  Personal attack / abusive language.
+  T08    study          FLAGGED    FLAGGED    CORRECT  Sharing pirated study material (promotes a pirated
+  T09    tech           PASS       PASS       CORRECT  
+  T10    tech           PASS       PASS       CORRECT  
+  T11    tech           PASS       PASS       CORRECT  
+  T12    tech           PASS       PASS       CORRECT  
+  T13    tech           FLAGGED    FLAGGED    CORRECT  Self-promotion without permission
+  T14    tech           FLAGGED    FLAGGED    CORRECT  Discriminatory content (gender-based hate speech)
+  T15    tech           FLAGGED    FLAGGED    CORRECT  Off-topic: The message does not stay on tech topic
+  T16    hangout        PASS       PASS       CORRECT  
+  T17    hangout        PASS       PASS       CORRECT  
+  T18    hangout        PASS       PASS       CORRECT  
+  T19    hangout        PASS       PASS       CORRECT  
+  T20    hangout        FLAGGED    FLAGGED    CORRECT  Threats and doxxing.
+  T21    hangout        FLAGGED    FLAGGED    CORRECT  NSFW content
+  T22    hangout        FLAGGED    FLAGGED    CORRECT  political argument
+  T23    study          PASS       PASS       CORRECT  Single-word reply after academic context — should 
+  T24    tech           PASS       FLAGGED    WRONG    Off-topic (not a tech-related message)
+  T25    study          FLAGGED    FLAGGED    CORRECT  abusive language / personal attack
+  T26    tech           FLAGGED    FLAGGED    CORRECT  Sharing credentials (password) is prohibited and o
+
+  Accuracy : 24/26 (92.3%)
+  False positives (flagged incorrectly) : T03, T24
+  False negatives (missed violations)   : none
+
+IMAGE MODERATION
+--------------------------------------------------------------------------------
+  ID     Expected   Actual     Result   Description
+  ------ ---------- ---------- -------- -----------
+  I01    PASS       UNAVAILABLE WRONG    Python code screenshot (safe)
+  I02    FLAGGED    UNAVAILABLE WRONG    Meme unrelated to academics
+  I03    PASS       UNAVAILABLE WRONG    Landscape nature photo
+
+  Accuracy : 0/3
+
+AUDIO MODERATION
+--------------------------------------------------------------------------------
+  ID     Expected   Actual     Result   Transcript / Note
+  ------ ---------- ---------- -------- -----------------
+  A01    PASS       UNAVAILABLE WRONG    audio moderation backend not available
+  A02    FLAGGED    UNAVAILABLE WRONG    audio moderation backend not available
+  A03    PASS       UNAVAILABLE WRONG    audio moderation backend not available
+
+  Accuracy : 0/3
+
+ADMIN FUNCTIONS
+--------------------------------------------------------------------------------
+  AD01   CORRECT  6 flagged messages found
+  AD02   CORRECT  appeal_status=PENDING_ADMIN
+  AD03   CORRECT  success=True status=
+  AD04   CORRECT  rules updated: True
+  AD05   CORRECT  under Strict sensitivity, borderline message got: FLAGGED
+
+ERROR HANDLING
+--------------------------------------------------------------------------------
+  N01    CORRECT  status=400 success=False
+  N02    CORRECT  status=400
+  N03    CORRECT  status=401
+  N04    CORRECT  status=403 success=False
+
+================================================================================
+SUMMARY
+================================================================================
+
+  Setup steps passed    : 7 / 7
+  Text tests            : 24 / 26 (92.3%)
+  Image tests           : 0 / 3
+  Audio tests           : 0 / 3
+  Admin tests           : 5 / 5
+  Error handling tests  : 4 / 4
+
+  Total tests run       : 41
+  Total correct         : 33
+  Overall accuracy      : 80.5%
+
+  False positives       : T03, T24
+  False negatives       : none
+  Setup failures        : none
+
+  Overall status        : PASS
+
+================================================================================
+END OF RESULTS
+================================================================================
