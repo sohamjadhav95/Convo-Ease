@@ -114,8 +114,8 @@ const API = {
     getSettings: () =>
         API.request('GET', '/api/settings'),
 
-    updateProfile: (username, full_name, bio) =>
-        API.request('PUT', '/api/user/profile', { username, full_name, bio }),
+    updateProfile: (username, full_name, bio, avatar) =>
+        API.request('PUT', '/api/user/profile', { username, full_name, bio, avatar }),
 };
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -134,6 +134,28 @@ function getAvatarColor(name) {
     let hash = 0;
     for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
     return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+const AVATAR_EMOJIS = {
+    bear: '🐻', fox: '🦊', owl: '🦉', wolf: '🐺', cat: '🐱',
+    eagle: '🦅', panda: '🐼', lion: '🦁', rocket: '🚀', diamond: '💎', ghost: '👻',
+};
+
+function renderAvatarContent(user) {
+    const avatar = user?.avatar || '';
+    if (avatar && AVATAR_EMOJIS[avatar]) {
+        return { text: AVATAR_EMOJIS[avatar], isEmoji: true };
+    }
+    return { text: getInitials(user?.full_name || ''), isEmoji: false };
+}
+
+function applyAvatarToElement(element, user) {
+    if (!element) return;
+    const content = renderAvatarContent(user);
+    element.textContent = content.text;
+    element.style.fontSize = content.isEmoji ? '20px' : '';
+    element.style.backgroundColor = content.isEmoji ? 'transparent' : (user?.profile_pic_color || getAvatarColor(user?.full_name || ''));
+    element.style.color = content.isEmoji ? '' : '#fff';
 }
 
 function escapeHtml(text) {
@@ -255,6 +277,38 @@ function _messageFingerprint(messages) {
     if (!messages || !messages.length) return '0::';
     const last = messages[messages.length - 1];
     return `${messages.length}:${last.message_id}:${last.status}:${last.message}`;
+}
+
+async function extractRulesFromFile(file, targetTextareaId, fileNameDisplayId) {
+    if (!file) return;
+    const maxSize = 2 * 1024 * 1024;
+    if (file.size > maxSize) {
+        showToast('File too large. Max 2 MB.', 'error');
+        return;
+    }
+
+    const display = fileNameDisplayId ? document.getElementById(fileNameDisplayId) : null;
+    if (display) display.textContent = `Extracting: ${file.name}...`;
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+        const resp = await fetch('/api/rules/extract', { method: 'POST', body: formData });
+        const data = await resp.json();
+        if (data.success) {
+            const target = document.getElementById(targetTextareaId);
+            if (target) target.value = data.extracted_text;
+            if (display) display.textContent = `Loaded: ${file.name}`;
+            showToast('Rules extracted from file!', 'success');
+        } else {
+            showToast(data.message || 'Failed to extract.', 'error');
+            if (display) display.textContent = '';
+        }
+    } catch (err) {
+        showToast('Connection error.', 'error');
+        if (display) display.textContent = '';
+    }
 }
 
 function getRiskMeta(username) {
@@ -600,8 +654,7 @@ function updateSidebar() {
     if (!State.user) return;
     const avatar = document.getElementById('sidebar-avatar');
     const name = document.getElementById('sidebar-name');
-    avatar.textContent = getInitials(State.user.full_name);
-    avatar.style.backgroundColor = State.user.profile_pic_color || getAvatarColor(State.user.full_name);
+    applyAvatarToElement(avatar, State.user);
     name.textContent = State.user.full_name;
 }
 
@@ -1380,14 +1433,18 @@ async function loadSettings() {
     if (!State.user) return;
 
     const avatar = document.getElementById('settings-avatar');
-    avatar.textContent = getInitials(State.user.full_name);
-    avatar.style.backgroundColor = State.user.profile_pic_color || getAvatarColor(State.user.full_name);
+    applyAvatarToElement(avatar, State.user);
     document.getElementById('settings-fullname').textContent = State.user.full_name;
     document.getElementById('settings-username').textContent = `@${State.user.username}`;
     const editFullname = document.getElementById('edit-fullname');
     const editBio = document.getElementById('edit-bio');
     if (editFullname) editFullname.value = State.user.full_name || '';
     if (editBio) editBio.value = State.user.bio || '';
+    document.querySelectorAll('.avatar-option').forEach(btn => {
+        btn.classList.toggle('active', (btn.dataset.avatar || '') === (State.user.avatar || ''));
+    });
+    const defaultBtn = document.getElementById('avatar-option-default');
+    if (defaultBtn) defaultBtn.textContent = getInitials(State.user.full_name || '');
 
     try {
         const data = await API.getSettings();
@@ -2269,6 +2326,27 @@ function initEventBindings() {
         setRuleSuggestionVisibility('admin', true);
         requestRuleSuggestions('admin');
     });
+    document.getElementById('btn-upload-create-rules').addEventListener('click', () => {
+        document.getElementById('create-rules-file').click();
+    });
+    document.getElementById('create-rules-file').addEventListener('change', (e) => {
+        if (e.target.files[0]) extractRulesFromFile(e.target.files[0], 'create-rules', 'create-rules-file-name');
+        e.target.value = '';
+    });
+    document.getElementById('btn-upload-admin-rules').addEventListener('click', () => {
+        document.getElementById('admin-rules-file').click();
+    });
+    document.getElementById('admin-rules-file').addEventListener('change', (e) => {
+        if (e.target.files[0]) extractRulesFromFile(e.target.files[0], 'admin-rules', null);
+        e.target.value = '';
+    });
+    document.querySelectorAll('.avatar-option').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.avatar-option').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (State.user) State.user.avatar = btn.dataset.avatar || '';
+        });
+    });
 
     const createRulesDebounced = debounce(() => requestRuleSuggestions('create'), 900);
     const adminRulesDebounced = debounce(() => requestRuleSuggestions('admin'), 900);
@@ -2386,20 +2464,21 @@ function initEventBindings() {
         if (!State.user) return;
         const fullName = document.getElementById('edit-fullname').value.trim();
         const bio = document.getElementById('edit-bio').value.trim();
+        const avatar = State.user.avatar || '';
         if (!fullName) { showToast('Name cannot be empty.', 'error'); return; }
 
         try {
-            const data = await API.updateProfile(State.user.username, fullName, bio);
+            const data = await API.updateProfile(State.user.username, fullName, bio, avatar);
             if (data.success) {
                 State.user.full_name = fullName;
                 State.user.bio = bio;
+                State.user.avatar = avatar;
                 sessionStorage.setItem('ce_session', JSON.stringify(State.user));
                 document.getElementById('settings-fullname').textContent = fullName;
                 const settingsAvatar = document.getElementById('settings-avatar');
-                if (settingsAvatar) {
-                    settingsAvatar.textContent = getInitials(fullName);
-                    settingsAvatar.style.backgroundColor = State.user.profile_pic_color || getAvatarColor(fullName);
-                }
+                applyAvatarToElement(settingsAvatar, State.user);
+                const defaultBtn = document.getElementById('avatar-option-default');
+                if (defaultBtn) defaultBtn.textContent = getInitials(fullName);
                 updateSidebar();
                 showToast('Profile saved!', 'success');
             } else {

@@ -1370,6 +1370,52 @@ def create_app():
             "revised_rules": revised_rules,
         }), 200
 
+    @app.route("/api/rules/extract", methods=["POST"])
+    def api_extract_rules():
+        """Extract text from an uploaded .txt or .pdf file for use as group rules."""
+        if "file" not in request.files:
+            return jsonify({"success": False, "message": "No file provided."}), 400
+
+        file = request.files["file"]
+        filename = (file.filename or "").lower()
+
+        if filename.endswith(".txt"):
+            try:
+                text = file.read().decode("utf-8", errors="replace").strip()
+            except Exception as exc:
+                return jsonify({"success": False, "message": f"Failed to read text file: {exc}"}), 400
+        elif filename.endswith(".pdf"):
+            try:
+                import io
+                import pdfplumber
+
+                pdf_bytes = file.read()
+                text_parts = []
+                with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
+                    for page in pdf.pages:
+                        page_text = page.extract_text()
+                        if page_text:
+                            text_parts.append(page_text.strip())
+                text = "\n".join(text_parts).strip()
+            except ImportError:
+                return jsonify({
+                    "success": False,
+                    "message": "PDF support requires pdfplumber. Install it with: pip install pdfplumber",
+                }), 500
+            except Exception as exc:
+                return jsonify({"success": False, "message": f"Failed to read PDF: {exc}"}), 400
+        else:
+            return jsonify({"success": False, "message": "Only .txt and .pdf files are supported."}), 400
+
+        if not text:
+            return jsonify({"success": False, "message": "File appears to be empty."}), 400
+
+        max_rules_length = 4000
+        if len(text) > max_rules_length:
+            text = text[:max_rules_length].rsplit(" ", 1)[0] + "\n[Truncated - original document was too long]"
+
+        return jsonify({"success": True, "extracted_text": text}), 200
+
     # ══════════════════════════════════════════════════════════════════════
     # SETTINGS API
     # ══════════════════════════════════════════════════════════════════════
@@ -1417,12 +1463,13 @@ def create_app():
         username = data.get("username", "").strip()
         full_name = data.get("full_name", None)
         bio = data.get("bio", None)
+        avatar = data.get("avatar", None)
 
         if not username:
             return jsonify({"success": False, "message": "Username required."}), 400
 
         _bind_request_context(user=username)
-        success, message = UserStore.update_profile(username, full_name, bio)
+        success, message = UserStore.update_profile(username, full_name, bio, avatar)
         if success:
             log_event(
                 logger, logging.INFO, "profile_updated",

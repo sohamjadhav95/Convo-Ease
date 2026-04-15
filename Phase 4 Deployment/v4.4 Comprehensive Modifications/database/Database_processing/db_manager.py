@@ -13,7 +13,7 @@ logger = setup_logging("db_manager")
 SCHEMAS = {
     "users": {
         "path": USERS_FILE,
-        "columns": ["username", "password", "full_name", "bio", "profile_pic_color", "created_at"]
+        "columns": ["username", "password", "full_name", "bio", "profile_pic_color", "avatar", "created_at"]
     },
     "groups": {
         "path": GROUPS_FILE,

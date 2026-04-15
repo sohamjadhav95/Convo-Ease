@@ -49,6 +49,7 @@ class UserStore:
             "full_name": full_name,
             "bio": bio,
             "profile_pic_color": UserStore._generate_color(),
+            "avatar": "",
             "created_at": UserStore._now()
         }
         DBManager.append_row(USERS_FILE, new_user)
@@ -77,7 +78,7 @@ class UserStore:
         return None
 
     @staticmethod
-    def update_profile(username, full_name=None, bio=None):
+    def update_profile(username, full_name=None, bio=None, avatar=None):
         """Update user profile fields. Returns (success, message)."""
         users = UserStore.load_all()
         mask = users["username"] == username
@@ -88,6 +89,8 @@ class UserStore:
             users.loc[mask, "full_name"] = full_name.strip()
         if bio is not None:
             users.loc[mask, "bio"] = bio.strip()
+        if avatar is not None:
+            users.loc[mask, "avatar"] = avatar.strip()
 
         DBManager.write_csv(USERS_FILE, users)
         logger.info(f"Profile updated for user: {username}")

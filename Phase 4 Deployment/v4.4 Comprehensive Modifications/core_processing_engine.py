@@ -96,6 +96,14 @@ class TextModerationPlugin(ProcessingPlugin):
         if not rules:
             return {"allowed": True, "reason": "No rules set."}
 
+        injection_reason = self._detect_prompt_injection(message)
+        if injection_reason:
+            return {"allowed": False, "reason": injection_reason}
+
+        is_spam, spam_reason = self._detect_spam_content(message)
+        if is_spam:
+            return {"allowed": False, "reason": spam_reason}
+
         try:
             system_prompt = "You are a strict Group Chat Moderator."
             user_prompt = self._build_prompt(
@@ -117,6 +125,10 @@ class TextModerationPlugin(ProcessingPlugin):
         context_str = "\n".join(recent_messages) if recent_messages else "(no prior messages)"
         context_mode = "required" if self._message_needs_context(message) else "reference_only"
         sensitivity_instructions = self._sensitivity_instructions(moderation_sensitivity)
+        normalized = self._normalize_leetspeak(message)
+        normalized_line = ""
+        if normalized and normalized.lower() != str(message or "").lower():
+            normalized_line = f'\nDECODED MESSAGE (leetspeak normalization): "{normalized}"'
         return f"""You are a strict Group Chat Moderator.
 
 ADMIN RULES:
@@ -137,17 +149,25 @@ MODERATION PRINCIPLES:
 5. Only use context to rescue ambiguous messages like "what happened?", "yes", "same here", "when?", or similar short replies.
 6. Do not FLAG a message just because it is different from the last few messages, unless it clearly violates or falls outside the ADMIN RULES.
 
+EMOJI HANDLING:
+- Evaluate emoji by their meaning and intent, not just their appearance.
+- The 🤬 emoji (face with symbols on mouth) represents profanity or strong frustration. Flag it if rules prohibit profanity or disrespectful language.
+- Skin-tone modified emoji and combinations that could carry discriminatory intent should be evaluated by context and intent.
+- A single emoji like 👍 or 😊 used as a reaction is almost always harmless.
+- Do not flag emoji just because they look unusual - focus on whether the intent violates the rules.
+
 CHAT CONTEXT:
 {context_str}
 
 TASK:
 Validate the NEW message against the rules and context.
 If the message is in a non-English language or script, evaluate its meaning and intent just as you would for English.
+Be aware that users may use character substitutions (leetspeak) to disguise prohibited content. Evaluate the phonetic and visual meaning, not just literal characters.
 Reply in one of these formats only:
 PASS
 FLAGGED <reason>
 
-NEW MESSAGE: "{message}"
+NEW MESSAGE: "{message}"{normalized_line}
 """
 
     @staticmethod
@@ -176,6 +196,108 @@ NEW MESSAGE: "{message}"
             return True
 
         return False
+
+    @staticmethod
+    def _detect_prompt_injection(message):
+        """
+        Deterministic pre-filter for common prompt injection patterns.
+        Returns a reason string if injection is detected, empty string otherwise.
+        """
+        text = str(message or "").lower().strip()
+        if not text:
+            return ""
+
+        injection_patterns = [
+            "ignore previous",
+            "ignore above",
+            "ignore all prior",
+            "ignore your instructions",
+            "disregard previous",
+            "disregard above",
+            "disregard your",
+            "forget your instructions",
+            "forget previous",
+            "override your",
+            "you are now",
+            "act as if",
+            "pretend you are",
+            "new instructions:",
+            "system prompt:",
+            "respond with pass",
+            "respond with: pass",
+            "always respond pass",
+            "say pass",
+            "output pass",
+            "return pass",
+            "just say pass",
+            "you must say pass",
+            "your new role",
+            "jailbreak",
+            "do not moderate",
+            "stop moderating",
+            "skip moderation",
+        ]
+
+        for pattern in injection_patterns:
+            if pattern in text:
+                return f"Message appears to contain a prompt injection attempt (matched: '{pattern}')."
+
+        return ""
+
+    @staticmethod
+    def _detect_spam_content(message):
+        """
+        Detect obvious spam/garbage content that doesn't need AI moderation.
+        Returns (should_block: bool, reason: str).
+        """
+        text = str(message or "").strip()
+        if not text:
+            return False, ""
+
+        lorem_markers = ["lorem ipsum", "dolor sit amet", "consectetur adipiscing", "sed do eiusmod"]
+        lower = text.lower()
+        if any(marker in lower for marker in lorem_markers):
+            return True, "Message appears to be filler/placeholder text (Lorem Ipsum)."
+
+        if len(text) >= 8:
+            unique_chars = set(text.replace(" ", ""))
+            if len(unique_chars) <= 2:
+                return True, "Message appears to be character spam."
+
+        words = text.split()
+        if len(words) >= 5:
+            unique_words = set(w.lower() for w in words)
+            if len(unique_words) <= 2:
+                return True, "Message appears to be repetitive spam."
+
+        return False, ""
+
+    @staticmethod
+    def _normalize_leetspeak(message):
+        """
+        Normalize common leetspeak substitutions.
+        Returns the normalized text, or empty string if no substitutions were made.
+        """
+        text = str(message or "")
+        if not text:
+            return ""
+
+        leet_map = {
+            "0": "o", "1": "i", "3": "e", "4": "a", "5": "s",
+            "7": "t", "8": "b", "@": "a", "$": "s", "!": "i",
+            "+": "t", "(": "c", "|": "l",
+        }
+
+        normalized = []
+        changed = False
+        for char in text:
+            if char in leet_map:
+                normalized.append(leet_map[char])
+                changed = True
+            else:
+                normalized.append(char)
+
+        return "".join(normalized) if changed else ""
 
     def generate_text(self, system_prompt, user_prompt, max_new_tokens=256, temperature=0.2):
         """Run a general-purpose text generation task on the configured backend."""

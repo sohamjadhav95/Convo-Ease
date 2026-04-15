@@ -318,6 +318,25 @@
                                 <input type="text" id="edit-bio" placeholder="A short bio (optional)">
                             </div>
                             <button class="btn btn-primary btn-sm" id="btn-save-profile" type="button">Save Profile</button>
+                            <div class="avatar-picker-section" style="margin-top:16px;">
+                                <label class="setting-label" style="margin-bottom:8px; display:block;">Choose Avatar</label>
+                                <div id="avatar-picker" class="avatar-picker">
+                                    <button class="avatar-option" data-avatar="" title="Default (initials)" type="button">
+                                        <span class="avatar-option-initials" id="avatar-option-default">??</span>
+                                    </button>
+                                    <button class="avatar-option" data-avatar="bear" title="Bear" type="button">🐻</button>
+                                    <button class="avatar-option" data-avatar="fox" title="Fox" type="button">🦊</button>
+                                    <button class="avatar-option" data-avatar="owl" title="Owl" type="button">🦉</button>
+                                    <button class="avatar-option" data-avatar="wolf" title="Wolf" type="button">🐺</button>
+                                    <button class="avatar-option" data-avatar="cat" title="Cat" type="button">🐱</button>
+                                    <button class="avatar-option" data-avatar="eagle" title="Eagle" type="button">🦅</button>
+                                    <button class="avatar-option" data-avatar="panda" title="Panda" type="button">🐼</button>
+                                    <button class="avatar-option" data-avatar="lion" title="Lion" type="button">🦁</button>
+                                    <button class="avatar-option" data-avatar="rocket" title="Rocket" type="button">🚀</button>
+                                    <button class="avatar-option" data-avatar="diamond" title="Diamond" type="button">💎</button>
+                                    <button class="avatar-option" data-avatar="ghost" title="Ghost" type="button">👻</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -581,6 +600,13 @@
                     <textarea id="create-rules" rows="3"
                         placeholder="e.g. Be respectful. No spam.">Be respectful.</textarea>
                 </div>
+                <div class="rules-upload-row">
+                    <input type="file" id="create-rules-file" accept=".txt,.pdf" style="display:none">
+                    <button type="button" class="btn btn-secondary btn-sm" id="btn-upload-create-rules">
+                        Upload Rules File (.txt / .pdf)
+                    </button>
+                    <span id="create-rules-file-name" class="text-muted" style="font-size:12px;"></span>
+                </div>
                 <div class="input-group">
                     <label for="create-sensitivity">Moderation Sensitivity</label>
                     <select id="create-sensitivity">
@@ -700,6 +726,8 @@
                     <textarea id="admin-rules" rows="5" placeholder="Group rules..."></textarea>
                     <div id="admin-rules-actions" style="display:none;">
                         <div class="rules-tools">
+                            <input type="file" id="admin-rules-file" accept=".txt,.pdf" style="display:none">
+                            <button class="btn btn-secondary btn-sm" id="btn-upload-admin-rules" type="button">Upload Rules File</button>
                             <button class="btn btn-secondary btn-sm" id="btn-suggest-admin-rules" type="button">AI Suggest</button>
                         </div>
                         <div id="admin-rule-suggestions" class="rule-suggestions-panel hidden"></div>

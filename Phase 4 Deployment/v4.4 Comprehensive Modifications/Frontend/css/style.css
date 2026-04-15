@@ -696,6 +696,49 @@ textarea {
     font-size: 24px;
 }
 
+.rules-upload-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.avatar-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.avatar-option {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    border: 2px solid var(--border-color);
+    background: var(--bg-input);
+    font-size: 22px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.avatar-option:hover {
+    border-color: var(--accent-light);
+    transform: scale(1.08);
+}
+
+.avatar-option.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-glow);
+}
+
+.avatar-option-initials {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    CHAT AREA
    ═══════════════════════════════════════════════════════════════════════════ */
