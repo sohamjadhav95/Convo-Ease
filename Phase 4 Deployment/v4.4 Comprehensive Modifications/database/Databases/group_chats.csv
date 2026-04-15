@@ -1,0 +1,126 @@
+message_id,group_id,username,message,status,reason,summary,media_url,group_rules,timestamp,initial_status,initial_reason,detected_language,language_confidence,translated_message,appeal_status,appeal_text,appeal_ai_status,appeal_ai_reason,appeal_submitted_at,appeal_reviewed_by,appeal_reviewed_at,appeal_admin_note
+55fcb7b3-bb24-4dcf-bf26-95b6e1159daf,27D9DD,rahul_k,Can someone share notes from today's lecture on binary trees?,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:36,PASS,,en,1.0,Can someone share notes from today's lecture on binary trees?,,,,,,,,
+7849022f-b39b-4ee6-b3de-b341051dd971,27D9DD,sneha_more,"I think the answer to Q3 is O(n log n), here is my working...",PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:37,PASS,,en,0.86,"I think the answer to Q3 is O(n log n), here is my working...",,,,,,,,
+99b92107-613f-4282-8e71-4565b02bf57d,27D9DD,neha_k,Aaj ki class mein kya cover hua? I missed it.,FLAGGED,"<Language violation: message is in Hindi, but only English or Marathi are allowed.>",,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:37,FLAGGED,"<Language violation: message is in Hindi, but only English or Marathi are allowed.>",en,0.43,Aaj ki class mein kya cover hua? I missed it.,,,,,,,,
+8add9e95-e8e6-40bb-a4e5-f13b4a324b86,27D9DD,rahul_k,Chapter 5 practice problems are up on the portal.,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:38,PASS,,en,1.0,Chapter 5 practice problems are up on the portal.,,,,,,,,
+038e2399-67f0-435a-8584-0d25168dfef7,27D9DD,sneha_more,Bhai exam ka paper mil sakta hai kya? 500 rupees dunga.,FLAGGED,<Violates rules: request for exam paper (pirated material) and uses Hindi instead of English or Marathi>,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:41,FLAGGED,<Violates rules: request for exam paper (pirated material) and uses Hindi instead of English or Marathi>,id,1.0,"Brother, can I get the exam paper? 500 rupees dunga.",,,,,,,,
+7aa75483-f2f0-4dc3-ac27-0b5c2523d757,27D9DD,neha_k,Anyone want to watch IPL tonight? Totally off topic I know lol,FLAGGED,Off-topic discussion (promoting non‑academic content),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:44,FLAGGED,Off-topic discussion (promoting non‑academic content),en,1.0,Anyone want to watch IPL tonight? Totally off topic I know lol,,,,,,,,
+c5dc64ea-a55e-44d1-9754-2848294e6a1f,27D9DD,rahul_k,"You're so dumb, how did you even pass last semester?",FLAGGED,Personal attack / abusive language.,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:46,FLAGGED,Personal attack / abusive language.,fr,0.71,"You're so dumb, how did you even pass last semester?",,,,,,,,
+b8e88933-66f9-45f3-8610-ae00519fe88f,27D9DD,sneha_more,Check this out: free-notes-pirated.xyz — has all textbooks,FLAGGED,Sharing pirated study material (promotes a pirated website),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:08:47,FLAGGED,Sharing pirated study material (promotes a pirated website),en,1.0,Check this out: free-notes-pirated.xyz — has all textbooks,,,,,,,,
+42e5ca5b-9cc1-4233-8861-96c5427b1cef,27D9DD,rahul_k,yes,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:09:30,PASS,,tr,1.0,yes,,,,,,,,
+6e20bca9-dbbe-4d72-bd78-1095d8781559,27D9DD,sneha_more,This group is full of idiots,PASS,Context accepted during testing.,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-07 13:09:42,FLAGGED,abusive language / personal attack,en,1.0,This group is full of idiots,APPROVED,This message was misunderstood — providing context.,FLAGGED,Violates Rule 2: contains abusive language/personal attack (“idiots”).,2026-04-07 13:09:48,arjun_sharma,2026-04-07 13:09:48,Context accepted during testing.
+9da5820e-a6fc-4be9-9a57-38e09d32637a,27D9DD,sneha_more,And this is real,FLAGGED,Off-topic content (not related to academic discussion),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:01:20,FLAGGED,Off-topic content (not related to academic discussion),en,1.0,And this is real,,,,,,,,
+99ab1538-4149-4641-8c24-fddbcf7821bf,27D9DD,sneha_more,Someone plese Send the nvidia-nim architecture diagram,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:01:49,PASS,,en,1.0,Someone plese Send the nvidia-nim architecture diagram,,,,,,,,
+5bdaf874-1b92-477f-9991-631054fad4a0,27D9DD,sneha_more,See I have raw diagram but I want detailed one,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:02:17,PASS,,en,1.0,See I have raw diagram but I want detailed one,,,,,,,,
+6d7ba429-d0bc-4da5-9c21-944024498f61,27D9DD,sneha_more,[IMAGE],PASS,,"The image presents a flowchart illustrating the process of creating an audio/video streaming application using NVIDIA's Riva and ACE Agent technologies. The chart outlines the steps involved in generating text responses to user input, including audio and video streaming, 3D animation pipeline, and feedback data.
+
+**Key Components:**
+
+* **User Input:** Audio and video streams are input into the system.
+* **NVIDIA Riva ASR:** Speech recognition technology is used to transcribe audio into text.
+* **NVIDIA Riva TTS:** Text-to-speech technology is used to generate audio responses.
+* **3D Animation Pipeline:** A pipeline for creating 3D animations is integrated into the system.
+* **Feedback Data:** Feedback data is collected and used to improve the system's performance.
+
+**Overall:** The flowchart provides a clear overview of the technical components involved in creating an interactive audio/video streaming application using NVIDIA's Riva and ACE Agent technologies.",/media/image/3dc7a79a-ff5c-45cf-9279-ee9ed8cfa19e.png,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:03:32,PASS,,,,,,,,,,,,
+90ff366d-3105-44f2-93fc-436ec9b35bfa,27D9DD,rahul_k,[IMAGE],PASS,,"The image presents a comparison of three different graphics processing units (GPUs) from NVIDIA, specifically the Pascal Streaming Multiprocessor (GP104), Turing Streaming Multiprocessor (TU104), and Ampere Streaming Mul",/media/image/17cf9330-9cb8-4a1a-a729-ff641ae4e34d.webp,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:11:48,PASS,,,,,,,,,,,,
+4ad9f76f-b250-4c84-b032-0c03529c8e07,27D9DD,sneha_more,Thanks rahul god bless you,FLAGGED,Off-topic content (non-academic),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:12:16,FLAGGED,Off-topic content (non-academic),en,1.0,Thanks rahul god bless you,,,,,,,,
+e657b731-6314-4fb5-98e0-44f00da33096,27D9DD,sneha_more,Thank you rahul,FLAGGED,Off-topic (non‑academic content),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:12:32,FLAGGED,Off-topic (non‑academic content),id,0.71,Thank you rahul,,,,,,,,
+8d799e27-4ef9-4197-b227-fd59cfb15f8d,27D9DD,sneha_more,Is this cover core architecutre,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:12:46,PASS,,en,1.0,Is this cover core architecutre,,,,,,,,
+a2adce65-f924-44cf-82df-5e84a83614e7,27D9DD,rahul_k,You know sheha you are genius,FLAGGED,Off-topic content (not an academic discussion),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:13:34,FLAGGED,Off-topic content (not an academic discussion),en,0.86,You know sheha you are genius,,,,,,,,
+9bc5f2fc-86a8-41a7-b5b5-ae6904b3b8e4,27D9DD,rahul_k,You know sheha you are genious,FLAGGED,Off-topic (non-academic),,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:15:17,FLAGGED,Off-topic (non-academic),en,1.0,You know sheha you are genious,,,,,,,,
+7eae8796-363b-4d16-857d-d7bf41940259,27D9DD,rahul_k,You are genious,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:15:32,PASS,,fr,1.0,You are genious,,,,,,,,
+afc9ce87-b610-48c0-9b8a-aa63136001b1,27D9DD,rahul_k,and dumb also,PASS,,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:15:43,PASS,,en,1.0,and dumb also,,,,,,,,
+41a6c037-2bc4-4433-811f-376ea28f2a9e,27D9DD,sneha_more,What you mean dumb,FLAGGED,Rules have been strict,,,"1. Only academic topics — no off-topic discussions
+2. No abusive language or personal attacks
+3. No sharing of pirated study material or answer keys
+4. No promotional messages or spam links
+5. English or Marathi only",2026-04-08 19:16:14,FLAGGED,<Personal attack or disrespectful language>,id,0.86,What you mean dumb,REJECTED,He said me dumb first,FLAGGED,"<The message contains disrespectful language (“dumb”) directed at another user, violating Rule 2 (no abusive language or personal attacks). Additionally, it is not in English or Marathi, violating Rule 5. The appeal does not justify the use of such language, so the original flag stands.>",2026-04-08 19:16:27,arjun_sharma,2026-04-08 19:17:29,Rules have been strict

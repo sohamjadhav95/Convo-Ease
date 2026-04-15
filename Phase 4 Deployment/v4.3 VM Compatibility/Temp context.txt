@@ -1,0 +1,105 @@
+**Universal Instructions for Safe Fixes, Enhancements & Scalable Development**
+
+First, build a clear understanding of the project:
+
+* Analyze architecture, modules, data flow, and dependencies
+* Identify core functionality vs optional/extendable components
+* Determine current stability (what is working vs what is broken/missing)
+
+---
+
+**Change Intent Awareness**
+Before making any modification, classify the task:
+
+* Bug Fix
+* New Feature
+* Refactor / Optimization
+* Structural / Architectural Change
+
+Align decisions based on the intent instead of applying rigid rules.
+
+---
+
+**Core Principles (Context-Aware, Not Absolute)**
+
+* Preserve **critical functionality** unless the task explicitly requires modifying or replacing it
+* Existing features may be **safely modified or extended** if required, but must not be broken unintentionally
+* Backward compatibility should be maintained **when relevant**, not forced when it blocks necessary improvements
+* Avoid introducing **tight coupling or fragile dependencies**
+* Ensure changes do not create **hidden risks for future updates**
+
+---
+
+**Engineering Standards for All Changes**
+
+All implementations should be:
+
+* **Scalable** → Handles growth (data, users, complexity)
+* **Flexible** → Easy to extend or modify
+* **Maintainable** → Clean, readable, well-structured code
+* **Modular** → Low coupling, high cohesion
+
+Prefer:
+
+* Clear abstractions
+* Reusable components
+* Config-driven logic over hardcoding
+
+---
+
+**Safety & Validation Layer**
+
+Before finalizing any change:
+
+* Check edge cases and failure scenarios
+* Validate integration with existing modules
+* Ensure no unintended side effects
+* Confirm that intentional changes behave as expected
+
+If modifying existing behavior:
+
+* Clearly distinguish **intentional change vs regression**
+* Ensure dependent components are updated accordingly
+
+---
+
+**Future-Proofing Mindset**
+
+* Avoid decisions that restrict future enhancements
+* Design with extensibility in mind
+* Minimize assumptions about fixed inputs or static workflows
+
+---
+
+**Decision Rule**
+
+If a trade-off is required:
+Prioritize **correctness → stability → scalability → flexibility** (in that order),
+but adapt based on the task intent.
+
+When uncertain, prefer solutions that are **safe, explicit, and easy to evolve later**.
+
+
+
+
+
+Ignore flagged issues for now I'll fix them in later versions. 
+
+I want now:
+In charts section I want to add a facility where user can add basic indicators to charts same as tradingview. They also can change indicators settings and all same as tradingview. 
+
+Keep in mind only make changes in charts layer, system is layered each layer is independent to other so only collect data access by charts section nothing else so keep system intact while making changes as instructed.
+
+
+
+Do not use Client-side computation, use existing data collection layer to get data, for avoiding inconsistancies get chart data and indicator data from same variable so it will not cause any differences.
+
+
+
+Make sure it will not cause chart inconsistancy between historic and live charts render. Because charts are live and also compose historic continuation for live with proper structure without gaps and breaks
+
+
+
+
+
+
