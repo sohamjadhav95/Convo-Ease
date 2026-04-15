@@ -1,12 +1,12 @@
-/**
- * ConvoEase — Frontend Application v3.5
+﻿/**
+ * ConvoEase â€” Frontend Application v3.5
  * SPA routing, API client, state management, DOM rendering, and theme system.
- * Pure vanilla JavaScript — no frameworks.
+ * Pure vanilla JavaScript â€” no frameworks.
  */
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // STATE
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const State = {
     user: null,           // { username, full_name, profile_pic_color, ... }
     groups: [],           // [{ group_id, group_name, admin_username }, ...]
@@ -16,16 +16,16 @@ const State = {
     pendingAppeal: null,  // { message_id, message, reason }
     memberRiskMap: {},    // { username: { trust_score, badge, risk_level } }
     pollTimer: null,
-    imageCache: {},       // { message_id: "/media/image/..." } — session-only cache
-    audioCache: {},       // { message_id: "/media/audio/..." } — session-only cache
+    imageCache: {},       // { message_id: "/media/image/..." } â€” session-only cache
+    audioCache: {},       // { message_id: "/media/audio/..." } â€” session-only cache
     modalOpenCount: 0,
     unreadCounts: {},
     groupMessageCounts: {},
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // API CLIENT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const API = {
     base: '',  // Same origin
 
@@ -84,11 +84,11 @@ const API = {
     deleteMessage: (group_id, message_id, username) =>
         API.request('DELETE', `/api/groups/${group_id}/messages/${message_id}`, { username }),
 
-    // Images — sends base64, returns message_id + summary + moderation result
+    // Images â€” sends base64, returns message_id + summary + moderation result
     sendImage: (group_id, username, image_data, mime_type) =>
         API.request('POST', `/api/groups/${group_id}/images`, { username, image_data, mime_type }),
 
-    // Audio — sends base64, returns message_id + transcript + moderation result
+    // Audio â€” sends base64, returns message_id + transcript + moderation result
     sendAudio: (group_id, username, audio_data, mime_type) =>
         API.request('POST', `/api/groups/${group_id}/audio`, { username, audio_data, mime_type }),
 
@@ -118,9 +118,9 @@ const API = {
         API.request('PUT', '/api/user/profile', { username, full_name, bio }),
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // UTILITIES
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function getInitials(name) {
     if (!name) return '?';
     const parts = name.trim().split(/\s+/);
@@ -230,7 +230,7 @@ function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-            // reader.result is "data:<mime>;base64,<data>" — strip the prefix
+            // reader.result is "data:<mime>;base64,<data>" â€” strip the prefix
             const base64 = reader.result.split(',')[1];
             resolve(base64);
         };
@@ -247,6 +247,16 @@ function debounce(fn, wait = 700) {
     };
 }
 
+/**
+ * Lightweight fingerprint for message-list change detection.
+ * Avoids expensive JSON.stringify on every poll cycle.
+ */
+function _messageFingerprint(messages) {
+    if (!messages || !messages.length) return '0::';
+    const last = messages[messages.length - 1];
+    return `${messages.length}:${last.message_id}:${last.status}:${last.message}`;
+}
+
 function getRiskMeta(username) {
     return State.memberRiskMap[username] || null;
 }
@@ -259,30 +269,37 @@ function renderRiskBadge(username) {
     return `<span class="member-risk-badge ${meta.badge}">${label}</span>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// THEME MANAGER  — v3.5
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+// THEME MANAGER  â€” v3.5
 // Persists dark/light + accent to localStorage. Applies data-theme / data-accent
 // on <html> so CSS variable overrides trigger automatically.
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const ThemeManager = {
     LS_THEME: 'ce_theme',   // 'dark' | 'light'
-    LS_ACCENT: 'ce_accent',  // 'violet' | 'blue' | 'emerald' | 'rose' | 'amber'
+    LS_ACCENT: 'ce_accent',  // 'teal' | 'slate' | 'graphite' | 'copper' | 'sage'
+    TRANSITION_CLASS: 'theme-transitioning',
+    _transitionTimer: null,
 
     /** Apply persisted settings immediately on load (called before DOMContentLoaded UI init) */
     applyPersisted() {
         const theme = localStorage.getItem(this.LS_THEME) || 'dark';
-        const accent = localStorage.getItem(this.LS_ACCENT) || 'violet';
+        let accent = localStorage.getItem(this.LS_ACCENT) || 'teal';
+        const migration = { violet: 'teal', blue: 'slate', emerald: 'sage', rose: 'copper', amber: 'copper' };
+        if (migration[accent]) {
+            accent = migration[accent];
+            localStorage.setItem(this.LS_ACCENT, accent);
+        }
         this._apply(theme, accent);
     },
 
     setTheme(theme) {
         localStorage.setItem(this.LS_THEME, theme);
-        this._apply(theme, localStorage.getItem(this.LS_ACCENT) || 'violet');
+        this._applyWithTransition(theme, localStorage.getItem(this.LS_ACCENT) || 'teal');
     },
 
     setAccent(accent) {
         localStorage.setItem(this.LS_ACCENT, accent);
-        this._apply(localStorage.getItem(this.LS_THEME) || 'dark', accent);
+        this._applyWithTransition(localStorage.getItem(this.LS_THEME) || 'dark', accent);
     },
 
     _apply(theme, accent) {
@@ -292,10 +309,20 @@ const ThemeManager = {
         html.setAttribute('data-accent', accent);
     },
 
+    _applyWithTransition(theme, accent) {
+        const html = document.documentElement;
+        clearTimeout(this._transitionTimer);
+        html.classList.add(this.TRANSITION_CLASS);
+        this._apply(theme, accent);
+        this._transitionTimer = setTimeout(() => {
+            html.classList.remove(this.TRANSITION_CLASS);
+        }, 250);
+    },
+
     /** Sync the Settings UI controls to current persisted values */
     syncUI() {
         const theme = localStorage.getItem(this.LS_THEME) || 'dark';
-        const accent = localStorage.getItem(this.LS_ACCENT) || 'violet';
+        const accent = localStorage.getItem(this.LS_ACCENT) || 'teal';
 
         const toggle = document.getElementById('toggle-light-mode');
         if (toggle) toggle.checked = (theme === 'light');
@@ -324,9 +351,9 @@ const ThemeManager = {
     },
 };
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // AUDIO RECORDER
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 const AudioRecorder = {
     mediaRecorder: null,
     chunks: [],
@@ -469,9 +496,9 @@ function navigateTo(page) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // AUTH
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function initAuth() {
     // Tab switching
     document.querySelectorAll('.auth-tab').forEach(tab => {
@@ -566,9 +593,9 @@ function logout() {
     document.getElementById('form-register').reset();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SIDEBAR
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function updateSidebar() {
     if (!State.user) return;
     const avatar = document.getElementById('sidebar-avatar');
@@ -619,8 +646,9 @@ function renderGroupList(filter = '') {
         const color = getAvatarColor(g.group_name);
         const initials = getInitials(g.group_name);
         const preview = (g.last_message || '').trim() || 'No messages yet';
-        const unreadDot = !isActive && (State.unreadCounts[g.group_id] || 0) > 0
-            ? `<span class="group-item-unread" title="${State.unreadCounts[g.group_id]} unread message${State.unreadCounts[g.group_id] === 1 ? '' : 's'}"></span>`
+        const unreadCount = State.unreadCounts[g.group_id] || 0;
+        const unreadBadge = !isActive && unreadCount > 0
+            ? `<span class="group-item-unread" title="${unreadCount} unread message${unreadCount === 1 ? '' : 's'}">${unreadCount > 99 ? '99+' : unreadCount}</span>`
             : '';
         const roleBadge = State.user && g.admin_username === State.user.username
             ? `<span class="group-item-role" title="You manage this group">
@@ -640,7 +668,7 @@ function renderGroupList(filter = '') {
                     </div>
                     <div class="group-item-preview">${escapeHtml(preview)}</div>
                 </div>
-                ${unreadDot}
+                ${unreadBadge}
             </div>`;
     }).join('');
 
@@ -649,11 +677,12 @@ function renderGroupList(filter = '') {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // CHAT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function selectGroup(groupId) {
     State.activeGroupId = groupId;
+    State.messages = [];
     State.unreadCounts[groupId] = 0;
     renderGroupList();
 
@@ -682,7 +711,7 @@ async function selectGroup(groupId) {
     const group = State.activeGroup || { group_name: 'Unknown', admin_username: '', group_id: groupId };
     document.getElementById('chat-header-name').textContent = group.group_name;
     const memberLabel = memberCount === 1 ? '1 member' : `${memberCount || 0} members`;
-    document.getElementById('chat-header-meta').textContent = `${memberLabel} • ${group.admin_username || 'Unknown'} (admin)`;
+    document.getElementById('chat-header-meta').textContent = `${memberLabel} â€¢ ${group.admin_username || 'Unknown'} (admin)`;
     const headerAvatar = document.getElementById('chat-header-avatar');
     headerAvatar.textContent = getInitials(group.group_name);
     headerAvatar.style.backgroundColor = getAvatarColor(group.group_name);
@@ -721,145 +750,188 @@ async function loadMemberInsights() {
 }
 
 async function loadMessages() {
-    if (!State.activeGroupId) return;
+    const groupId = State.activeGroupId;
+    if (!groupId) return;
     try {
-        const data = await API.getMessages(State.activeGroupId);
-        if (data.success) {
-            const oldCount = State.messages.length;
-            const hasChanged = JSON.stringify(State.messages) !== JSON.stringify(data.messages);
-            if (hasChanged) {
-                State.messages = data.messages;
-                State.groupMessageCounts[State.activeGroupId] = data.messages.length;
-                renderMessages(data.messages.length > oldCount);
-            }
+        const data = await API.getMessages(groupId);
+        if (!data.success || groupId !== State.activeGroupId) return;
+
+        const oldFingerprint = _messageFingerprint(State.messages);
+        const newFingerprint = _messageFingerprint(data.messages);
+
+        if (oldFingerprint === newFingerprint) return;
+
+        const oldCount = State.messages.length;
+        const newCount = data.messages.length;
+        State.messages = data.messages;
+        State.groupMessageCounts[groupId] = newCount;
+
+        if (oldCount === 0 || newCount < oldCount) {
+            renderMessages(false);
+            if (newCount > 0) scrollToBottom();
+        } else if (newCount > oldCount) {
+            appendNewMessages(data.messages.slice(oldCount));
+        } else {
+            renderMessages(false);
         }
     } catch (err) {
         console.error('Failed to load messages:', err);
     }
 }
 
+function _bindMessageDeleteButtons(nodes) {
+    nodes.forEach(node => {
+        node.querySelectorAll('.msg-delete-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const messageId = btn.dataset.mid;
+                if (!messageId || !State.activeGroupId || !State.user) return;
+                if (!confirm('Delete this message? This cannot be undone.')) return;
+
+                try {
+                    const data = await API.deleteMessage(State.activeGroupId, messageId, State.user.username);
+                    if (data.success) await loadMessages();
+                    else showToast(data.message || 'Could not delete.', 'error');
+                } catch (err) {
+                    showToast('Connection error.', 'error');
+                }
+            });
+        });
+    });
+}
+
+function _buildMessageHTML(m) {
+    const isMe = State.user && m.username === State.user.username;
+    const senderHtml = isMe ? '' : `
+        <div class="msg-sender-row">
+            <div class="msg-sender">${escapeHtml(m.username)}</div>
+            ${renderRiskBadge(m.username)}
+        </div>`;
+
+    const isDeleted = m.message === '[deleted]' || m.status === 'DELETED';
+    const isImage = m.message && (m.message === '[IMAGE]' || m.message.startsWith('[IMAGE]'));
+    const isAudio = m.message && (m.message === '[AUDIO]' || m.message.startsWith('[AUDIO]'));
+
+    let bubbleContent;
+    if (isDeleted) {
+        bubbleContent = `<span class="msg-deleted">This message was deleted.</span>`;
+    } else if (isImage) {
+        const inlineSummary = m.summary || m.message.replace(/^\[IMAGE\]\s*/, '');
+        const imgSrc = (m.media_url && m.media_url.trim())
+            ? m.media_url
+            : (State.imageCache[m.message_id] || null);
+        if (imgSrc) {
+            bubbleContent = `
+                <div class="msg-image-wrapper">
+                    <img class="msg-image" src="${imgSrc}" alt="Shared image" loading="lazy">
+                </div>
+                ${inlineSummary ? `<div class="msg-image-caption">${escapeHtml(inlineSummary)}</div>` : ''}`;
+        } else {
+            bubbleContent = `
+                <div class="msg-image-indicator">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span>Image</span>
+                </div>
+                ${inlineSummary ? `<div class="msg-image-summary">${escapeHtml(inlineSummary)}</div>` : ''}`;
+        }
+    } else if (isAudio) {
+        const transcript = m.summary || '';
+        const audioSrc = (m.media_url && m.media_url.trim())
+            ? m.media_url
+            : (State.audioCache[m.message_id] || null);
+        if (audioSrc) {
+            bubbleContent = `
+                <div class="msg-audio-wrapper">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    </svg>
+                    <audio class="msg-audio-player" controls src="${audioSrc}" preload="metadata"></audio>
+                </div>
+                ${transcript ? `<div class="msg-audio-transcript">\u{1F3A4} ${escapeHtml(transcript)}</div>` : ''}`;
+        } else {
+            bubbleContent = `
+                <div class="msg-audio-indicator">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                    </svg>
+                    <span>Audio</span>
+                </div>
+                ${transcript ? `<div class="msg-audio-transcript">\u{1F3A4} ${escapeHtml(transcript)}</div>` : ''}`;
+        }
+    } else {
+        bubbleContent = escapeHtml(m.message);
+    }
+
+    return `
+        <div class="message-row ${isMe ? 'me' : 'other'}${isImage ? ' image-msg' : ''}${isAudio ? ' audio-msg' : ''}">
+            ${senderHtml}
+            <div class="msg-bubble">
+                ${bubbleContent}
+                <div class="msg-meta-row">
+                    <span class="msg-time">${formatTime(m.timestamp)}</span>
+                    ${isMe && !isDeleted ? `<button class="msg-delete-btn" data-mid="${m.message_id}" title="Delete message">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="3 6 5 6 21 6"></polyline>
+                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                        </svg>
+                    </button>` : ''}
+                </div>
+            </div>
+        </div>`;
+}
+
 function renderMessages(autoScroll = false) {
     const container = document.getElementById('chat-messages');
+    if (!container) return;
     if (State.messages.length === 0) {
         container.innerHTML = `
             <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
-                <p>No messages yet. Say hello! 👋</p>
+                <p>No messages yet. Say hello! \u{1F44B}</p>
             </div>`;
         return;
     }
 
-    container.innerHTML = State.messages.map(m => {
-        const isMe = State.user && m.username === State.user.username;
-        const senderHtml = isMe ? '' : `
-            <div class="msg-sender-row">
-                <div class="msg-sender">${escapeHtml(m.username)}</div>
-                ${renderRiskBadge(m.username)}
-            </div>`;
+    container.innerHTML = State.messages.map(m => _buildMessageHTML(m)).join('');
 
-        const isDeleted = m.message === '[deleted]' || m.status === 'DELETED';
-        // Detect image messages
-        const isImage = m.message && (m.message === '[IMAGE]' || m.message.startsWith('[IMAGE]'));
-        // Detect audio messages
-        const isAudio = m.message && (m.message === '[AUDIO]' || m.message.startsWith('[AUDIO]'));
+    if (autoScroll) scrollToBottom();
 
-        let bubbleContent;
-        if (isDeleted) {
-            bubbleContent = `<span class="msg-deleted">This message was deleted.</span>`;
-        } else if (isImage) {
-            const inlineSummary = m.summary || m.message.replace(/^\[IMAGE\]\s*/, '');
-            const imgSrc = (m.media_url && m.media_url.trim())
-                ? m.media_url
-                : (State.imageCache[m.message_id] || null);
-            if (imgSrc) {
-                bubbleContent = `
-                    <div class="msg-image-wrapper">
-                        <img class="msg-image" src="${imgSrc}" alt="Shared image" loading="lazy">
-                    </div>
-                    ${inlineSummary ? `<div class="msg-image-caption">${escapeHtml(inlineSummary)}</div>` : ''}`;
-            } else {
-                bubbleContent = `
-                    <div class="msg-image-indicator">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                            <circle cx="8.5" cy="8.5" r="1.5"></circle>
-                            <polyline points="21 15 16 10 5 21"></polyline>
-                        </svg>
-                        <span>Image</span>
-                    </div>
-                    ${inlineSummary ? `<div class="msg-image-summary">${escapeHtml(inlineSummary)}</div>` : ''}`;
-            }
-        } else if (isAudio) {
-            const transcript = m.summary || '';
-            // Priority: persisted server URL → session cache
-            const audioSrc = (m.media_url && m.media_url.trim())
-                ? m.media_url
-                : (State.audioCache[m.message_id] || null);
-            if (audioSrc) {
-                bubbleContent = `
-                    <div class="msg-audio-wrapper">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        </svg>
-                        <audio class="msg-audio-player" controls src="${audioSrc}" preload="metadata"></audio>
-                    </div>
-                    ${transcript ? `<div class="msg-audio-transcript">🎤 ${escapeHtml(transcript)}</div>` : ''}`;
-            } else {
-                bubbleContent = `
-                    <div class="msg-audio-indicator">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
-                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
-                        </svg>
-                        <span>Audio</span>
-                    </div>
-                    ${transcript ? `<div class="msg-audio-transcript">🎤 ${escapeHtml(transcript)}</div>` : ''}`;
-            }
-        } else {
-            bubbleContent = escapeHtml(m.message);
-        }
+    _bindMessageDeleteButtons(Array.from(container.children));
+}
 
-        return `
-            <div class="message-row ${isMe ? 'me' : 'other'}${isImage ? ' image-msg' : ''}${isAudio ? ' audio-msg' : ''}">
-                ${senderHtml}
-                <div class="msg-bubble">
-                    ${bubbleContent}
-                    <div class="msg-meta-row">
-                        <span class="msg-time">${formatTime(m.timestamp)}</span>
-                        ${isMe && !isDeleted ? `<button class="msg-delete-btn" data-mid="${m.message_id}" title="Delete message">
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="3 6 5 6 21 6"></polyline>
-                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                            </svg>
-                        </button>` : ''}
-                    </div>
-                </div>
-            </div>`;
-    }).join('');
+/**
+ * Append only new messages to the DOM without destroying existing nodes.
+ * This is the key anti-flicker optimization for the common case of
+ * new messages arriving during polling.
+ */
+function appendNewMessages(newMessages) {
+    const container = document.getElementById('chat-messages');
+    if (!container || !newMessages.length) return;
 
-    if (autoScroll) {
-        scrollToBottom();
+    if (container.querySelector('.message-row') === null) {
+        renderMessages(true);
+        return;
     }
 
-    // Bind delete buttons
-    container.querySelectorAll('.msg-delete-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const messageId = btn.dataset.mid;
-            if (!messageId || !State.activeGroupId || !State.user) return;
-            if (!confirm('Delete this message? This cannot be undone.')) return;
-
-            try {
-                const data = await API.deleteMessage(State.activeGroupId, messageId, State.user.username);
-                if (data.success) {
-                    await loadMessages();
-                } else {
-                    showToast(data.message || 'Could not delete.', 'error');
-                }
-            } catch (err) {
-                showToast('Connection error.', 'error');
-            }
-        });
+    const fragment = document.createDocumentFragment();
+    const newNodes = [];
+    newMessages.forEach(m => {
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = _buildMessageHTML(m);
+        const node = wrapper.firstElementChild;
+        if (node) {
+            newNodes.push(node);
+            fragment.appendChild(node);
+        }
     });
+
+    container.appendChild(fragment);
+    _bindMessageDeleteButtons(newNodes);
+    scrollToBottom();
 }
 
 function scrollToBottom() {
@@ -899,7 +971,7 @@ async function sendMessage() {
     }
 }
 
-// ── Audio Upload ─────────────────────────────────────────────────────────────
+// â”€â”€ Audio Upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function sendAudio(file) {
     if (!file || !State.activeGroupId || !State.user) return;
@@ -1206,11 +1278,34 @@ async function pollGroupUnreadCounts() {
         });
 
         if (hasUnreadUpdate) {
-            renderGroupList(document.getElementById('search-groups')?.value || '');
+            _updateUnreadBadgesInPlace();
         }
     } catch (err) {
         console.error('Failed to poll unread counts:', err);
     }
+}
+
+/**
+ * Update unread badges in the sidebar without re-rendering the entire group list.
+ * This prevents the flicker caused by innerHTML replacement on every poll cycle.
+ */
+function _updateUnreadBadgesInPlace() {
+    const container = document.getElementById('group-list');
+    if (!container) return;
+    container.querySelectorAll('.group-item').forEach(el => {
+        const gid = el.dataset.gid;
+        const count = State.unreadCounts[gid] || 0;
+        const isActive = gid === State.activeGroupId;
+        const existingBadge = el.querySelector('.group-item-unread');
+        if (existingBadge) existingBadge.remove();
+        if (!isActive && count > 0) {
+            const badge = document.createElement('span');
+            badge.className = 'group-item-unread';
+            badge.textContent = count > 99 ? '99+' : count;
+            badge.title = `${count} unread message${count === 1 ? '' : 's'}`;
+            el.appendChild(badge);
+        }
+    });
 }
 
 async function pollGroupDetails() {
@@ -1278,9 +1373,9 @@ async function pollGroupDetails() {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // SETTINGS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function loadSettings() {
     if (!State.user) return;
 
@@ -1315,9 +1410,9 @@ async function loadSettings() {
     ThemeManager.syncUI();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // MODALS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 function openModal(modalId) {
     const modal = document.getElementById(modalId);
     if (!modal || !modal.classList.contains('hidden')) return;
@@ -1387,7 +1482,6 @@ function renderFlaggedList(flaggedItems, isAdmin) {
             : isAud
                 ? (f.summary || 'Audio content')
                 : f.message;
-        const languageLine = f.detected_language ? `<div class="flagged-item-meta">Language: ${escapeHtml(f.detected_language)}</div>` : '';
         const appealLine = f.appeal_text
             ? `<div class="flagged-item-meta"><strong>Appeal:</strong> ${escapeHtml(f.appeal_text)}</div>
                <div class="flagged-item-meta"><strong>AI Re-check:</strong> ${escapeHtml(f.appeal_ai_status || 'Pending')} ${f.appeal_ai_reason ? `- ${escapeHtml(f.appeal_ai_reason)}` : ''}</div>`
@@ -1410,7 +1504,6 @@ function renderFlaggedList(flaggedItems, isAdmin) {
                 </div>
                 <div class="flagged-item-message">${escapeHtml(displayMsg)}</div>
                 <div class="flagged-item-reason">${escapeHtml(f.reason)}</div>
-                ${languageLine}
                 ${appealLine}
                 ${actions}
             </div>`;
@@ -1432,7 +1525,7 @@ function initModals() {
         });
     });
 
-    // Modal tabs (Create/Join group) — uses data-modal-tab
+    // Modal tabs (Create/Join group) â€” uses data-modal-tab
     document.querySelectorAll('[data-modal-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.modalTab;
@@ -1445,7 +1538,7 @@ function initModals() {
         });
     });
 
-    // Admin panel tabs — uses data-admin-tab
+    // Admin panel tabs â€” uses data-admin-tab
     document.querySelectorAll('[data-admin-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.adminTab;
@@ -1514,9 +1607,9 @@ function initModals() {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // ADMIN PANEL
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function openAdminPanel() {
     if (!State.activeGroup || !State.user) return;
 
@@ -1636,7 +1729,7 @@ async function openAdminPanel() {
     openModal('modal-admin');
 }
 
-// ── Moderation Report ────────────────────────────────────────────────────────
+// â”€â”€ Moderation Report â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 async function loadModerationReport(group_id) {
     return loadModerationPage(group_id);
@@ -1702,17 +1795,17 @@ async function loadModerationReport(group_id) {
             reasonsEl.innerHTML = r.flagged_reasons.map(reason => `
                 <div class="reason-item">
                     <span class="reason-label">${escapeHtml(reason.reason)}</span>
-                    <span class="reason-count">${reason.count}×</span>
+                    <span class="reason-count">${reason.count}Ã—</span>
                 </div>`).join('');
         } else {
             reasonsEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No violations recorded.</p>';
         }
 
-        // ── Helper to build a message log item ──────────────────────────────
+        // â”€â”€ Helper to build a message log item â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         function buildMsgItem(m, style) {
             const isAudio = m.type === 'audio';
             const badgeCls = m.type === 'image' ? 'badge-image' : isAudio ? 'badge-audio' : 'badge-text';
-            const badgeTxt = m.type === 'image' ? '📷 Image' : isAudio ? '🎤 Audio' : '💬 Text';
+            const badgeTxt = m.type === 'image' ? '\u{1F4F7} Image' : isAudio ? '\u{1F3A4} Audio' : '\u{1F4AC} Text';
             return `
                 <div class="report-msg-item ${style}">
                     <div class="report-msg-header">
@@ -1725,7 +1818,7 @@ async function loadModerationReport(group_id) {
                 </div>`;
         }
 
-        // ── Passed messages log ──────────────────────────────────────────────
+        // â”€â”€ Passed messages log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (passedLogEl) {
             if (r.passed_messages && r.passed_messages.length > 0) {
                 passedLogEl.innerHTML = r.passed_messages.map(m => buildMsgItem(m, 'pass')).join('');
@@ -1734,12 +1827,12 @@ async function loadModerationReport(group_id) {
             }
         }
 
-        // ── Flagged messages log ─────────────────────────────────────────────
+        // â”€â”€ Flagged messages log â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         if (flaggedLogEl) {
             if (r.flagged_messages && r.flagged_messages.length > 0) {
                 flaggedLogEl.innerHTML = r.flagged_messages.map(m => buildMsgItem(m, 'flagged')).join('');
             } else {
-                flaggedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No flagged messages. 🎉</p>';
+                flaggedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No flagged messages. \u{1F389}</p>';
             }
         }
 
@@ -1749,9 +1842,9 @@ async function loadModerationReport(group_id) {
     }
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // EVENT BINDINGS
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 async function loadModerationPage() {
     if (!State.activeGroup || !State.user) return;
 
@@ -2052,13 +2145,13 @@ function initEventBindings() {
         }
     });
 
-    // Image attach button → trigger file picker
+    // Image attach button â†’ trigger file picker
     document.getElementById('btn-attach-image').addEventListener('click', () => {
         primeAttachButton('btn-attach-image', 'image-file-input');
         document.getElementById('image-file-input').click();
     });
 
-    // File chosen → send image
+    // File chosen â†’ send image
     document.getElementById('image-file-input').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2067,20 +2160,20 @@ function initEventBindings() {
         }
     });
 
-    // Audio button → start mic recording
+    // Audio button â†’ start mic recording
     document.getElementById('btn-attach-audio').addEventListener('click', () => {
         if (AudioRecorder.isRecording) return;
         AudioRecorder.start();
     });
 
-    // Right-click on mic button → file picker fallback
+    // Right-click on mic button â†’ file picker fallback
     document.getElementById('btn-attach-audio').addEventListener('contextmenu', (e) => {
         e.preventDefault();
         primeAttachButton('btn-attach-audio', 'audio-file-input');
         document.getElementById('audio-file-input').click();
     });
 
-    // Stop recording → send the captured audio
+    // Stop recording â†’ send the captured audio
     document.getElementById('btn-stop-recording').addEventListener('click', async () => {
         const blob = await AudioRecorder.stop();
         if (blob && blob.size > 0) {
@@ -2098,7 +2191,7 @@ function initEventBindings() {
         showToast('Recording cancelled.', '');
     });
 
-    // File chosen → send audio
+    // File chosen â†’ send audio
     document.getElementById('audio-file-input').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2318,9 +2411,9 @@ function initEventBindings() {
     });
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 // INIT
-// ═══════════════════════════════════════════════════════════════════════════════
+// â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 document.addEventListener('DOMContentLoaded', () => {
     initAuth();
     initModals();
@@ -2478,3 +2571,4 @@ async function _legacyLoadModerationReport(group_id) {
         showToast('Error loading report.', 'error');
     }
 }
+

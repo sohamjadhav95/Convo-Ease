@@ -7,7 +7,7 @@ client = OpenAI(
 
 completion = client.chat.completions.create(
   model="openai/gpt-oss-120b",
-  messages=[{"role":"user","content":"Hello"}],
+  messages=[{"role":"user","content":"What's this emoji shows? 🥺"}],
   temperature=1,
   top_p=1,
   max_tokens=4096,

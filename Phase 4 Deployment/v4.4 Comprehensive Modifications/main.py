@@ -190,8 +190,6 @@ def _run_appeal_review(run_text_task, message_row, group, appeal_text):
             f"Group rules:\n{group.get('rules', '')}\n\n"
             f"Moderation sensitivity: {sensitivity}\n"
             f"Original message: {message_row.get('message', '')}\n"
-            f"Detected language: {message_row.get('detected_language', 'unknown')}\n"
-            f"English translation reference: {message_row.get('translated_message', '') or message_row.get('message', '')}\n"
             f"Original flag reason: {original_reason}\n"
             f"Appeal explanation: {appeal_text}\n"
         ),
@@ -786,9 +784,6 @@ def create_app():
                 group_rules=rules,
                 initial_status="PASS",
                 initial_reason="",
-                detected_language=moderation_result.get("detected_language", ""),
-                language_confidence=moderation_result.get("language_confidence", ""),
-                translated_message=moderation_result.get("translated_message", ""),
             )
             log_event(
                 logger,
@@ -801,7 +796,6 @@ def create_app():
                 details={
                     "backend": text_backend,
                     "message_preview": _payload_preview(message),
-                    "detected_language": moderation_result.get("detected_language", ""),
                 },
             )
             return jsonify({"success": True, "status": "PASS", "message_id": msg_id}), 200
@@ -815,9 +809,6 @@ def create_app():
                 group_rules=rules,
                 initial_status="FLAGGED",
                 initial_reason=moderation_result["reason"],
-                detected_language=moderation_result.get("detected_language", ""),
-                language_confidence=moderation_result.get("language_confidence", ""),
-                translated_message=moderation_result.get("translated_message", ""),
             )
             log_event(
                 logger,
@@ -831,7 +822,6 @@ def create_app():
                     "backend": text_backend,
                     "message_preview": _payload_preview(message),
                     "reason": moderation_result["reason"],
-                    "detected_language": moderation_result.get("detected_language", ""),
                 },
             )
             return jsonify({
@@ -839,7 +829,6 @@ def create_app():
                 "status": "FLAGGED",
                 "reason": moderation_result["reason"],
                 "message_id": msg_id,
-                "detected_language": moderation_result.get("detected_language", ""),
             }), 200
 
     @app.route("/api/groups/<group_id>/messages/<message_id>/appeal", methods=["POST"])
