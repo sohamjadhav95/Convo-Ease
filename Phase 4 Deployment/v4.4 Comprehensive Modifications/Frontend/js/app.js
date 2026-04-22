@@ -1,7 +1,7 @@
-﻿/**
- * ConvoEase â€” Frontend Application v3.5
+/**
+ * ConvoEase - Frontend Application v3.5
  * SPA routing, API client, state management, DOM rendering, and theme system.
- * Pure vanilla JavaScript â€” no frameworks.
+ * Pure vanilla JavaScript - no frameworks.
  */
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -16,8 +16,8 @@ const State = {
     pendingAppeal: null,  // { message_id, message, reason }
     memberRiskMap: {},    // { username: { trust_score, badge, risk_level } }
     pollTimer: null,
-    imageCache: {},       // { message_id: "/media/image/..." } â€” session-only cache
-    audioCache: {},       // { message_id: "/media/audio/..." } â€” session-only cache
+    imageCache: {},       // { message_id: "/media/image/..." } - session-only cache
+    audioCache: {},       // { message_id: "/media/audio/..." } - session-only cache
     modalOpenCount: 0,
     unreadCounts: {},
     groupMessageCounts: {},
@@ -84,11 +84,11 @@ const API = {
     deleteMessage: (group_id, message_id, username) =>
         API.request('DELETE', `/api/groups/${group_id}/messages/${message_id}`, { username }),
 
-    // Images â€” sends base64, returns message_id + summary + moderation result
+    // Images - sends base64, returns message_id + summary + moderation result
     sendImage: (group_id, username, image_data, mime_type) =>
         API.request('POST', `/api/groups/${group_id}/images`, { username, image_data, mime_type }),
 
-    // Audio â€” sends base64, returns message_id + transcript + moderation result
+    // Audio - sends base64, returns message_id + transcript + moderation result
     sendAudio: (group_id, username, audio_data, mime_type) =>
         API.request('POST', `/api/groups/${group_id}/audio`, { username, audio_data, mime_type }),
 
@@ -252,7 +252,7 @@ function fileToBase64(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = () => {
-            // reader.result is "data:<mime>;base64,<data>" â€” strip the prefix
+            // reader.result is "data:<mime>;base64,<data>" - strip the prefix
             const base64 = reader.result.split(',')[1];
             resolve(base64);
         };
@@ -324,7 +324,7 @@ function renderRiskBadge(username) {
 }
 
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-// THEME MANAGER  â€” v3.5
+// THEME MANAGER  - v3.5
 // Persists dark/light + accent to localStorage. Applies data-theme / data-accent
 // on <html> so CSS variable overrides trigger automatically.
 // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -764,7 +764,7 @@ async function selectGroup(groupId) {
     const group = State.activeGroup || { group_name: 'Unknown', admin_username: '', group_id: groupId };
     document.getElementById('chat-header-name').textContent = group.group_name;
     const memberLabel = memberCount === 1 ? '1 member' : `${memberCount || 0} members`;
-    document.getElementById('chat-header-meta').textContent = `${memberLabel} â€¢ ${group.admin_username || 'Unknown'} (admin)`;
+    document.getElementById('chat-header-meta').textContent = `${memberLabel} \u2022 ${group.admin_username || 'Unknown'} (admin)`;
     const headerAvatar = document.getElementById('chat-header-avatar');
     headerAvatar.textContent = getInitials(group.group_name);
     headerAvatar.style.backgroundColor = getAvatarColor(group.group_name);
@@ -1582,7 +1582,7 @@ function initModals() {
         });
     });
 
-    // Modal tabs (Create/Join group) â€” uses data-modal-tab
+    // Modal tabs (Create/Join group) - uses data-modal-tab
     document.querySelectorAll('[data-modal-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.modalTab;
@@ -1595,7 +1595,7 @@ function initModals() {
         });
     });
 
-    // Admin panel tabs â€” uses data-admin-tab
+    // Admin panel tabs - uses data-admin-tab
     document.querySelectorAll('[data-admin-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
             const target = tab.dataset.adminTab;
