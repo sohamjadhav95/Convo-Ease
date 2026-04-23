@@ -360,7 +360,7 @@ class ImageModerationPlugin(ProcessingPlugin):
     def __init__(self, text_model_config, vision_model_config, text_moderator=None):
         self.text_config = text_model_config
         self.vision_config = vision_model_config
-        self.backend = vision_model_config.get("backend", "api")
+        self.backend = vision_model_config.get("backend")
         self._vision_backend = get_image_backend(vision_model_config)
         self._text_moderator = text_moderator or TextModerationPlugin(text_model_config)
 
