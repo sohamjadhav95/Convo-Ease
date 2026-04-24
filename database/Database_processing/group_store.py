@@ -90,11 +90,28 @@ class GroupStore:
         result = pd.merge(user_memberships, groups, on="group_id")
         records = result[["group_id", "group_name", "admin_username"]].to_dict("records")
 
+        if not records:
+            return records
+
+        # Single CSV read; slice per-group in memory to avoid N+1.
         from .message_store import MessageStore
+        all_msgs = MessageStore.load_messages()
+        if all_msgs.empty:
+            for record in records:
+                record["last_message"] = ""
+            return records
+
+        passed = all_msgs[all_msgs["status"] == "PASS"].sort_values("timestamp")
+        group_ids = {r["group_id"] for r in records}
+        last_by_group = {}
+        for row in passed.to_dict("records"):
+            gid = row.get("group_id")
+            if gid in group_ids:
+                last_by_group[gid] = row
 
         for record in records:
-            recent = MessageStore.get_recent_messages(record["group_id"], limit=1, include_flagged=False)
-            record["last_message"] = MessageStore._display_message(recent[-1]) if recent else ""
+            last = last_by_group.get(record["group_id"])
+            record["last_message"] = MessageStore._display_message(last) if last else ""
 
         return records
 

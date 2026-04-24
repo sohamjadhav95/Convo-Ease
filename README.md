@@ -57,6 +57,10 @@ The admin report includes:
 - moderation trend cards
 - recent passed and flagged message logs
 
+Flagged media note:
+
+- Flagged media files remain on disk under `database/media/`, but they are only referenced from the flagged-messages admin panel; the URL is not discoverable without admin view access.
+
 Backend:
 
 - `GET /api/groups/<group_id>/report`

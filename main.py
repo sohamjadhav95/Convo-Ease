@@ -1389,12 +1389,19 @@ def create_app():
         if "file" not in request.files:
             return jsonify({"success": False, "message": "No file provided."}), 400
 
+        MAX_EXTRACT_BYTES = 5 * 1024 * 1024
         file = request.files["file"]
+        declared = request.content_length or 0
+        if declared and declared > MAX_EXTRACT_BYTES:
+            return jsonify({"success": False, "message": "File too large. Max 5 MB."}), 413
         filename = (file.filename or "").lower()
 
         if filename.endswith(".txt"):
             try:
-                text = file.read().decode("utf-8", errors="replace").strip()
+                raw = file.read(MAX_EXTRACT_BYTES + 1)
+                if len(raw) > MAX_EXTRACT_BYTES:
+                    return jsonify({"success": False, "message": "File too large. Max 5 MB."}), 413
+                text = raw.decode("utf-8", errors="replace").strip()
             except Exception as exc:
                 return jsonify({"success": False, "message": f"Failed to read text file: {exc}"}), 400
         elif filename.endswith(".pdf"):
@@ -1402,7 +1409,9 @@ def create_app():
                 import io
                 import pdfplumber
 
-                pdf_bytes = file.read()
+                pdf_bytes = file.read(MAX_EXTRACT_BYTES + 1)
+                if len(pdf_bytes) > MAX_EXTRACT_BYTES:
+                    return jsonify({"success": False, "message": "File too large. Max 5 MB."}), 413
                 text_parts = []
                 with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
                     for page in pdf.pages:
