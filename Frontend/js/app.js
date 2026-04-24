@@ -1,5 +1,5 @@
 /**
- * ConvoEase - Frontend Application v3.5
+ * ConvoEase - Frontend Application (version synced from /api/settings)
  * SPA routing, API client, state management, DOM rendering, and theme system.
  * Pure vanilla JavaScript - no frameworks.
  */
@@ -136,8 +136,8 @@ function getAvatarColor(name) {
 }
 
 const AVATAR_EMOJIS = {
-    bear: '🐻', fox: '🦊', owl: '🦉', wolf: '🐺', cat: '🐱',
-    eagle: '🦅', panda: '🐼', lion: '🦁', rocket: '🚀', diamond: '💎', ghost: '👻',
+    bear: '\u{1F43B}', fox: '\u{1F98A}', owl: '\u{1F989}', wolf: '\u{1F43A}', cat: '\u{1F431}',
+    eagle: '\u{1F985}', panda: '\u{1F43C}', lion: '\u{1F981}', rocket: '\u{1F680}', diamond: '\u{1F48E}', ghost: '\u{1F47B}',
 };
 
 function renderAvatarContent(user) {
@@ -323,7 +323,7 @@ function renderRiskBadge(username) {
 }
 
 // =========================================================================
-// THEME MANAGER  - v3.5
+// THEME MANAGER
 // Persists dark/light + accent to localStorage. Applies data-theme / data-accent
 // on <html> so CSS variable overrides trigger automatically.
 // =========================================================================
@@ -1256,14 +1256,14 @@ async function requestRuleSuggestions(source) {
     const groupName = groupNameEl ? groupNameEl.value || groupNameEl.textContent || '' : '';
     if (!rules) {
         suggestionsEl.innerHTML = '<p class="text-muted">Add a few rules first and AI will suggest improvements.</p>';
-        if (previewEl) previewEl.textContent = '';
+        if (previewEl) previewEl.value = '';
         setRuleSuggestionVisibility(source, false);
         return;
     }
 
     setRuleSuggestionVisibility(source, true);
     suggestionsEl.innerHTML = '<p class="text-muted">Reviewing rules...</p>';
-    if (previewEl) previewEl.textContent = '';
+    if (previewEl) previewEl.value = '';
 
     try {
         const data = await API.suggestRules(rules, groupName.trim());
@@ -1276,7 +1276,7 @@ async function requestRuleSuggestions(source) {
         suggestionsEl.innerHTML = suggestions.length
             ? suggestions.map(item => `<div class="rule-suggestion-item">${escapeHtml(item)}</div>`).join('')
             : '<p class="text-muted">No extra suggestions needed.</p>';
-        if (previewEl) previewEl.textContent = data.revised_rules || '';
+        if (previewEl) previewEl.value = data.revised_rules || '';
     } catch (err) {
         suggestionsEl.innerHTML = '<p class="text-muted">Connection error while suggesting rules.</p>';
     }
@@ -1454,7 +1454,7 @@ async function loadSettings() {
             document.getElementById('setting-url').textContent = (s.content_types || []).join(', ') || 'Standard chat';
             document.getElementById('setting-plugins').textContent = (s.features || []).join(', ') || 'Enabled';
             const versionEl = document.getElementById('setting-version');
-            if (versionEl) versionEl.textContent = s.app_version || '4.1';
+            if (versionEl) versionEl.textContent = s.app_version || '';
             const vmEl = document.getElementById('setting-vision-model');
             if (vmEl) vmEl.textContent = `${s.plugin_count || 0} active`;
         }
@@ -1787,117 +1787,6 @@ async function openAdminPanel() {
 
 // =========================================================================
 
-async function loadModerationReport(group_id) {
-    return loadModerationPage(group_id);
-
-    // Reset to loading state
-    ['report-total', 'report-passed', 'report-flagged', 'report-images',
-        'report-pass-rate', 'report-flagged-rate'].forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '...';
-        });
-    document.getElementById('report-bar-pass').style.width = '0%';
-    document.getElementById('report-bar-flag').style.width = '0%';
-    document.getElementById('report-member-table').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    document.getElementById('report-reasons').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    const passedLogEl = document.getElementById('report-passed-log');
-    const flaggedLogEl = document.getElementById('report-flagged-log');
-    if (passedLogEl) passedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    if (flaggedLogEl) flaggedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-
-    try {
-        const data = await API.getModerationReport(group_id);
-        if (!data.success) { showToast('Failed to load report.', 'error'); return; }
-        const r = data.report;
-
-        // Stat cards
-        document.getElementById('report-total').textContent = r.total_messages;
-        document.getElementById('report-passed').textContent = r.pass_count;
-        document.getElementById('report-flagged').textContent = r.flagged_count;
-        document.getElementById('report-images').textContent = r.image_count;
-        const audioEl = document.getElementById('report-audios');
-        if (audioEl) audioEl.textContent = r.audio_count ?? 0;
-        document.getElementById('report-pass-rate').textContent = `${r.pass_rate}%`;
-        document.getElementById('report-flagged-rate').textContent = `${r.flagged_rate}%`;
-
-        setTimeout(() => {
-            document.getElementById('report-bar-pass').style.width = `${r.pass_rate}%`;
-            document.getElementById('report-bar-flag').style.width = `${r.flagged_rate}%`;
-        }, 80);
-
-        // Member activity table
-        const memberTable = document.getElementById('report-member-table');
-        if (r.member_activity && r.member_activity.length > 0) {
-            memberTable.innerHTML = `
-                <table class="report-table">
-                    <thead><tr><th>Member</th><th>Trust</th><th>Sent</th><th>Flagged</th><th>Total</th></tr></thead>
-                    <tbody>${r.member_activity.map(m => `
-                        <tr class="report-member-row ${getReportRiskTone(m)}">
-                            <td><span class="report-member-name">${escapeHtml(m.username)} ${renderRiskBadge(m.username)}</span></td>
-                            <td><span class="trust-pill ${m.badge}">${m.trust_score}</span></td>
-                            <td class="text-pass">${m.sent}</td>
-                            <td class="text-danger">${m.flagged}</td>
-                            <td>${m.total_attempts}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>`;
-        } else {
-            memberTable.innerHTML = '<p class="text-muted" style="font-size:13px;">No activity yet.</p>';
-        }
-
-        // Flagged reasons
-        const reasonsEl = document.getElementById('report-reasons');
-        if (r.flagged_reasons && r.flagged_reasons.length > 0) {
-            reasonsEl.innerHTML = r.flagged_reasons.map(reason => `
-                <div class="reason-item">
-                    <span class="reason-label">${escapeHtml(reason.reason)}</span>
-                    <span class="reason-count">${reason.count}Ã—</span>
-                </div>`).join('');
-        } else {
-            reasonsEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No violations recorded.</p>';
-        }
-
-        // =========================================================================
-        function buildMsgItem(m, style) {
-            const isAudio = m.type === 'audio';
-            const badgeCls = m.type === 'image' ? 'badge-image' : isAudio ? 'badge-audio' : 'badge-text';
-            const badgeTxt = m.type === 'image' ? '\u{1F4F7} Image' : isAudio ? '\u{1F3A4} Audio' : '\u{1F4AC} Text';
-            return `
-                <div class="report-msg-item ${style}">
-                    <div class="report-msg-header">
-                        <span class="report-msg-user">${escapeHtml(m.username)}</span>
-                        <span class="report-msg-badge ${badgeCls}">${badgeTxt}</span>
-                        <span class="report-msg-time">${formatTime(m.timestamp)}</span>
-                    </div>
-                    <div class="report-msg-content">${escapeHtml(m.display)}</div>
-                    <div class="report-msg-reason ${style}">${escapeHtml(m.reason)}</div>
-                </div>`;
-        }
-
-        // =========================================================================
-        if (passedLogEl) {
-            if (r.passed_messages && r.passed_messages.length > 0) {
-                passedLogEl.innerHTML = r.passed_messages.map(m => buildMsgItem(m, 'pass')).join('');
-            } else {
-                passedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No passed messages yet.</p>';
-            }
-        }
-
-        // =========================================================================
-        if (flaggedLogEl) {
-            if (r.flagged_messages && r.flagged_messages.length > 0) {
-                flaggedLogEl.innerHTML = r.flagged_messages.map(m => buildMsgItem(m, 'flagged')).join('');
-            } else {
-                flaggedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">No flagged messages. \u{1F389}</p>';
-            }
-        }
-
-    } catch (err) {
-        console.error('Failed to load report:', err);
-        showToast('Error loading report.', 'error');
-    }
-}
-
 // =========================================================================
 // EVENT BINDINGS
 // =========================================================================
@@ -2201,13 +2090,13 @@ function initEventBindings() {
         }
     });
 
-    // Image attach button â†’ trigger file picker
+    // Image attach button -> trigger file picker
     document.getElementById('btn-attach-image').addEventListener('click', () => {
         primeAttachButton('btn-attach-image', 'image-file-input');
         document.getElementById('image-file-input').click();
     });
 
-    // File chosen â†’ send image
+    // File chosen -> send image
     document.getElementById('image-file-input').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2216,20 +2105,20 @@ function initEventBindings() {
         }
     });
 
-    // Audio button â†’ start mic recording
+    // Audio button -> start mic recording
     document.getElementById('btn-attach-audio').addEventListener('click', () => {
         if (AudioRecorder.isRecording) return;
         AudioRecorder.start();
     });
 
-    // Right-click on mic button â†’ file picker fallback
+    // Right-click on mic button -> file picker fallback
     document.getElementById('btn-attach-audio').addEventListener('contextmenu', (e) => {
         e.preventDefault();
         primeAttachButton('btn-attach-audio', 'audio-file-input');
         document.getElementById('audio-file-input').click();
     });
 
-    // Stop recording â†’ send the captured audio
+    // Stop recording -> send the captured audio
     document.getElementById('btn-stop-recording').addEventListener('click', async () => {
         const blob = await AudioRecorder.stop();
         if (blob && blob.size > 0) {
@@ -2247,7 +2136,7 @@ function initEventBindings() {
         showToast('Recording cancelled.', '');
     });
 
-    // File chosen â†’ send audio
+    // File chosen -> send audio
     document.getElementById('audio-file-input').addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -2514,139 +2403,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     navigateTo('auth');
 });
-
-async function _legacyLoadModerationReport(group_id) {
-    ['report-total', 'report-passed', 'report-flagged', 'report-images', 'report-pass-rate', 'report-flagged-rate']
-        .forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.textContent = '...';
-        });
-
-    document.getElementById('report-bar-pass').style.width = '0%';
-    document.getElementById('report-bar-flag').style.width = '0%';
-    document.getElementById('report-member-table').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    document.getElementById('report-reasons').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    document.getElementById('report-categories').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    document.getElementById('report-trends').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    document.getElementById('report-heatmap').innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-
-    const passedLogEl = document.getElementById('report-passed-log');
-    const flaggedLogEl = document.getElementById('report-flagged-log');
-    if (passedLogEl) passedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-    if (flaggedLogEl) flaggedLogEl.innerHTML = '<p class="text-muted" style="font-size:13px;">Loading...</p>';
-
-    try {
-        const data = await API.getModerationReport(group_id);
-        if (!data.success) {
-            showToast('Failed to load report.', 'error');
-            return;
-        }
-
-        const r = data.report;
-        State.memberRiskMap = Object.fromEntries((r.member_activity || []).map(member => [member.username, member]));
-
-        document.getElementById('report-total').textContent = r.total_messages;
-        document.getElementById('report-passed').textContent = r.pass_count;
-        document.getElementById('report-flagged').textContent = r.flagged_count;
-        document.getElementById('report-images').textContent = r.image_count;
-        const audioEl = document.getElementById('report-audios');
-        if (audioEl) audioEl.textContent = r.audio_count ?? 0;
-        document.getElementById('report-pass-rate').textContent = `${r.pass_rate}%`;
-        document.getElementById('report-flagged-rate').textContent = `${r.flagged_rate}%`;
-
-        setTimeout(() => {
-            document.getElementById('report-bar-pass').style.width = `${r.pass_rate}%`;
-            document.getElementById('report-bar-flag').style.width = `${r.flagged_rate}%`;
-        }, 80);
-
-        const memberTable = document.getElementById('report-member-table');
-        if (r.member_activity?.length) {
-            memberTable.innerHTML = `
-                <table class="report-table">
-                    <thead><tr><th>Member</th><th>Trust</th><th>Sent</th><th>Flagged</th><th>Total</th></tr></thead>
-                    <tbody>${r.member_activity.map(m => `
-                        <tr>
-                            <td>${escapeHtml(m.username)} ${renderRiskBadge(m.username)}</td>
-                            <td><span class="trust-pill ${m.badge}">${m.trust_score}</span></td>
-                            <td class="text-pass">${m.sent}</td>
-                            <td class="text-danger">${m.flagged}</td>
-                            <td>${m.total_attempts}</td>
-                        </tr>`).join('')}
-                    </tbody>
-                </table>`;
-        } else {
-            memberTable.innerHTML = '<p class="text-muted" style="font-size:13px;">No activity yet.</p>';
-        }
-
-        const renderReasonList = items => items.map(item => `
-            <div class="reason-item">
-                <span class="reason-label">${escapeHtml(item.reason || item.category)}</span>
-                <span class="reason-count">${item.count}x</span>
-            </div>`).join('');
-
-        document.getElementById('report-reasons').innerHTML = r.flagged_reasons?.length
-            ? renderReasonList(r.flagged_reasons)
-            : '<p class="text-muted" style="font-size:13px;">No violations recorded.</p>';
-
-        document.getElementById('report-categories').innerHTML = r.flag_categories?.length
-            ? renderReasonList(r.flag_categories)
-            : '<p class="text-muted" style="font-size:13px;">No category trends yet.</p>';
-
-        document.getElementById('report-trends').innerHTML = r.trend_points?.length
-            ? r.trend_points.map(point => `
-                <div class="trend-card">
-                    <div class="trend-date">${escapeHtml(point.date)}</div>
-                    <div class="trend-bars">
-                        <div class="trend-bar pass" style="width:${Math.min(100, point.passed * 20)}%"></div>
-                        <div class="trend-bar danger" style="width:${Math.min(100, point.flagged * 20)}%"></div>
-                    </div>
-                    <div class="trend-meta">
-                        <span>Pass ${point.passed}</span>
-                        <span>Flag ${point.flagged}</span>
-                    </div>
-                </div>`).join('')
-            : '<p class="text-muted" style="font-size:13px;">No trend data yet.</p>';
-
-        document.getElementById('report-heatmap').innerHTML = r.member_heatmap?.length
-            ? r.member_heatmap.map(member => `
-                <div class="heatmap-card ${member.risk_level}">
-                    <div class="heatmap-user">${escapeHtml(member.username)}</div>
-                    <div class="heatmap-score">${member.trust_score}</div>
-                    <div class="heatmap-meta">Compliance ${member.compliance_rate}%</div>
-                </div>`).join('')
-            : '<p class="text-muted" style="font-size:13px;">No member heatmap data yet.</p>';
-
-        const buildMsgItem = (m, style) => {
-            const badgeCls = m.type === 'image' ? 'badge-image' : m.type === 'audio' ? 'badge-audio' : 'badge-text';
-            const badgeTxt = m.type === 'image' ? 'Image' : m.type === 'audio' ? 'Audio' : 'Text';
-            const categoryTag = m.category ? `<span class="report-msg-badge category">${escapeHtml(m.category)}</span>` : '';
-            return `
-                <div class="report-msg-item ${style}">
-                    <div class="report-msg-header">
-                        <span class="report-msg-user">${escapeHtml(m.username)}</span>
-                        <span class="report-msg-badge ${badgeCls}">${badgeTxt}</span>
-                        ${categoryTag}
-                        <span class="report-msg-time">${formatTime(m.timestamp)}</span>
-                    </div>
-                    <div class="report-msg-content">${escapeHtml(m.display)}</div>
-                    <div class="report-msg-reason ${style}">${escapeHtml(m.reason)}</div>
-                </div>`;
-        };
-
-        if (passedLogEl) {
-            passedLogEl.innerHTML = r.passed_messages?.length
-                ? r.passed_messages.map(m => buildMsgItem(m, 'pass')).join('')
-                : '<p class="text-muted" style="font-size:13px;">No passed messages yet.</p>';
-        }
-
-        if (flaggedLogEl) {
-            flaggedLogEl.innerHTML = r.flagged_messages?.length
-                ? r.flagged_messages.map(m => buildMsgItem(m, 'flagged')).join('')
-                : '<p class="text-muted" style="font-size:13px;">No flagged messages.</p>';
-        }
-    } catch (err) {
-        console.error('Failed to load report:', err);
-        showToast('Error loading report.', 'error');
-    }
-}
 

@@ -21,5 +21,5 @@ class ImageBackend(ABC):
 
 class AudioBackend(ABC):
     @abstractmethod
-    def transcribe(self, base64_data: str) -> str:
+    def transcribe(self, base64_data: str, mime_type: str = "audio/wav") -> str:
         """Return the full speech transcript as plain text."""

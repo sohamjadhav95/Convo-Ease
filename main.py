@@ -19,6 +19,7 @@ from flask_cors import CORS
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
+    APP_VERSION,
     FRONTEND_DIR,
     SECRET_KEY,
     TEXT_MODEL_CONFIG,
@@ -265,8 +266,12 @@ def _service_unavailable_response(kind):
     )
 
 
+_ALLOWED_AUDIO_EXT = {"mp3", "m4a", "wav", "ogg", "opus", "flac", "webm", "aac"}
+_ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "gif", "webp", "bmp"}
+
+
 def _normalize_audio_extension(mime_type):
-    fmt = mime_type.split("/")[-1].split(";")[0].lower().strip() or "wav"
+    fmt = (mime_type or "").split("/")[-1].split(";")[0].lower().strip() or "wav"
     aliases = {
         "mpeg": "mp3",
         "mp4": "m4a",
@@ -274,7 +279,20 @@ def _normalize_audio_extension(mime_type):
         "x-wav": "wav",
         "wave": "wav",
     }
-    return aliases.get(fmt, fmt)
+    fmt = aliases.get(fmt, fmt)
+    return fmt if fmt in _ALLOWED_AUDIO_EXT else "wav"
+
+
+def _sanitize_media_ext(mime_type, default="png"):
+    """
+    Derive a safe filesystem extension from an image mime_type.
+    Whitelist-validated so a malicious client cannot smuggle path/XSS
+    characters into media_url.
+    """
+    raw = (mime_type or "").split("/")[-1].split(";")[0].split("+")[0].lower().strip()
+    if raw == "jpeg":
+        raw = "jpg"
+    return raw if raw in _ALLOWED_IMAGE_EXT else default
 
 def create_app():
     """Application factory — creates and configures the Flask app."""
@@ -993,12 +1011,8 @@ def create_app():
 
         # Decode base64 and save image to disk so it persists across restarts
         # and is visible to all users via /media/image/{filename}.
-        ext = (mime_type.split("/")[-1] or "png").split("+")[0]   # e.g. "jpeg", "png", "webp"
-
-        # We need the message_id before saving so the filename matches
-        import uuid as _uuid
-        preliminary_id = str(_uuid.uuid4())
-        filename = f"{preliminary_id}.{ext}"
+        ext = _sanitize_media_ext(mime_type, default="png")
+        filename = f"{uuid.uuid4()}.{ext}"
         filepath = os.path.join(MEDIA_IMAGE_DIR, filename)
 
         try:
@@ -1152,8 +1166,7 @@ def create_app():
 
         # Save audio file to disk so it persists and is playable from any client
         ext = _normalize_audio_extension(mime_type)
-        import uuid as _uuid
-        filename  = f"{str(_uuid.uuid4())}.{ext}"
+        filename  = f"{uuid.uuid4()}.{ext}"
         filepath  = os.path.join(MEDIA_AUDIO_DIR, filename)
         media_url = f"/media/audio/{filename}"
 
@@ -1432,7 +1445,7 @@ def create_app():
                 "Appeal review flow",
                 "Admin analytics dashboard",
             ],
-            "app_version": "4.1",
+            "app_version": APP_VERSION,
             "plugin_count": len(engine.list_plugins()),
         }
         log_event(

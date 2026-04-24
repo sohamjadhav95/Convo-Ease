@@ -4,6 +4,8 @@ All paths, API settings, and logging are defined here.
 No hardcoded system paths - everything is relative to this file's location.
 """
 
+APP_VERSION = "4.2"
+
 import json
 import os
 import logging

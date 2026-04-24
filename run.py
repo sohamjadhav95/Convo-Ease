@@ -19,7 +19,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from main import create_app
-from config import HOST, PORT, DEBUG, TEXT_MODEL_CONFIG, IMAGE_MODEL_CONFIG, AUDIO_MODEL_CONFIG
+from config import HOST, PORT, DEBUG, TEXT_MODEL_CONFIG, IMAGE_MODEL_CONFIG, AUDIO_MODEL_CONFIG, APP_VERSION
 
 
 def _should_disable_reloader():
@@ -38,7 +38,7 @@ if __name__ == "__main__":
     disable_reloader = _should_disable_reloader()
     use_reloader = DEBUG and not disable_reloader
     print(f"\n{'='*50}")
-    print(f"  ConvoEase v3.5")
+    print(f"  ConvoEase v{APP_VERSION}")
     print(f"  Running on http://localhost:{PORT}")
     print(f"  Debug mode: {DEBUG}")
     if disable_reloader:

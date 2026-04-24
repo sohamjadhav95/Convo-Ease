@@ -1,4 +1,4 @@
-# ConvoEase v3.6 - Python Dependencies
+# ConvoEase v4.2 - Python Dependencies
 # Install with: pip install -r requirements.txt
 # Updated against current PyPI stable releases on 2026-04-05.
 # Note: several latest packages below now require Python 3.10+.
