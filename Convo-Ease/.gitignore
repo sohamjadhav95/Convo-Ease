@@ -1,0 +1,9 @@
+__pycache__/
+.pytest_cache/
+.playwright/
+.env
+.env.*
+testing/artifacts/stress-runtime/
+testing/artifacts/**/*.png
+testing/artifacts/**/*.webm
+testing/artifacts/**/*.zip
