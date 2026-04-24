@@ -364,6 +364,25 @@ class ImageModerationPlugin(ProcessingPlugin):
         self._vision_backend = get_image_backend(vision_model_config)
         self._text_moderator = text_moderator or TextModerationPlugin(text_model_config)
 
+        # Model-swap policy:
+        # - API mode on both sides: never swap.
+        # - Local mode on at least one side AND CUDA available: swap to let the
+        #   text and vision models share a small VRAM budget.
+        # - Local mode on CPU-only: do not swap, because reloading from disk
+        #   dominates latency there.
+        self._should_swap_backends = self._compute_swap_policy()
+
+    def _compute_swap_policy(self):
+        text_local = self.text_config.get("backend", "api") == "local"
+        vision_local = self.vision_config.get("backend", "api") == "local"
+        if not (text_local or vision_local):
+            return False
+        try:
+            import torch
+            return bool(torch.cuda.is_available())
+        except Exception:
+            return False
+
     def get_input_schema(self):
         return {
             "image_data": "str - Base64-encoded image bytes",
@@ -419,17 +438,16 @@ class ImageModerationPlugin(ProcessingPlugin):
 
     def _summarize_image(self, base64_data, mime_type):
         try:
-            # On 4 GB GPUs the local text and image Gemma runtimes cannot stay
-            # resident together. Release the text backend before loading the
-            # multimodal model, then release the image backend after use so text
-            # moderation can reload for the summary decision.
-            _release_backend_instance(getattr(self._text_moderator, "_backend", None))
+            # Swap only when local backends are sharing a CUDA VRAM budget.
+            if self._should_swap_backends:
+                _release_backend_instance(getattr(self._text_moderator, "_backend", None))
             return self._vision_backend.describe(base64_data, mime_type)
         except Exception as exc:
             logger.error("Image summarization failed: %s", exc)
             return None
         finally:
-            _release_backend_instance(self._vision_backend)
+            if self._should_swap_backends:
+                _release_backend_instance(self._vision_backend)
 
 
 class AudioModerationPlugin(ProcessingPlugin):
