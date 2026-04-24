@@ -72,6 +72,7 @@ class DBManager:
                     logger.info(f"Created empty database file: {schema['path']}")
                 else:
                     DBManager._migrate_schema(schema["path"], schema["columns"])
+        DBManager._migrate_group_passwords_to_hashed()
 
     @staticmethod
     def _migrate_schema(file_path, columns):
@@ -89,6 +90,30 @@ class DBManager:
             df = df[ordered]
             DBManager._atomic_write(file_path, df)
             logger.info(f"Migrated schema for: {file_path}")
+
+    @staticmethod
+    def _migrate_group_passwords_to_hashed():
+        """One-time migration: pre-hash existing plaintext group passwords.
+        Detects plaintext by length (SHA-256 hex is always 64 chars). Safe to
+        run repeatedly - already-hashed rows are untouched.
+        """
+        from .user_store import hash_password as _hash
+
+        path = SCHEMAS["groups"]["path"]
+        if not os.path.exists(path):
+            return
+        with _lock_for(path):
+            df = pd.read_csv(path, encoding="utf-8", dtype=str).fillna("")
+            if "password" not in df.columns:
+                return
+            changed = False
+            for i, pw in enumerate(df["password"].tolist()):
+                if pw and len(pw) != 64:
+                    df.at[i, "password"] = _hash(pw)
+                    changed = True
+            if changed:
+                DBManager._atomic_write(path, df)
+                logger.info("Migrated legacy plaintext group passwords to hashed form.")
 
     @staticmethod
     def read_csv(file_path, as_string=True):

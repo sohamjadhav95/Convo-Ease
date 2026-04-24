@@ -5,8 +5,9 @@ All group-related database operations: create, join, members, rules.
 
 import uuid
 from datetime import datetime
-from config import GROUPS_FILE, MEMBERS_FILE, setup_logging
+from config import GROUPS_FILE, MEMBERS_FILE, CHATS_FILE, setup_logging
 from .db_manager import DBManager
+from .user_store import hash_password
 
 logger = setup_logging("group_store")
 
@@ -37,7 +38,7 @@ class GroupStore:
             "group_id": group_id,
             "group_name": group_name,
             "admin_username": admin_username,
-            "password": password,
+            "password": hash_password(password) if password else "",
             "rules": initial_rules,
             "moderation_sensitivity": sensitivity,
             "created_at": GroupStore._now()
@@ -56,7 +57,8 @@ class GroupStore:
         if target.empty:
             return False, "Group not found."
 
-        if target.iloc[0]["password"] != password:
+        stored = str(target.iloc[0]["password"] or "")
+        if stored and stored != hash_password(password):
             return False, "Incorrect group password."
 
         members = GroupStore.load_members()
@@ -182,7 +184,6 @@ class GroupStore:
         members = members[members["group_id"] != group_id]
         DBManager.write_csv(MEMBERS_FILE, members)
 
-        from config import CHATS_FILE
         chats = DBManager.read_csv(CHATS_FILE)
         chats = chats[chats["group_id"] != group_id]
         DBManager.write_csv(CHATS_FILE, chats)

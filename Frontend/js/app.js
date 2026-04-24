@@ -34,8 +34,21 @@ const API = {
             headers: { 'Content-Type': 'application/json' },
         };
         if (body) opts.body = JSON.stringify(body);
-        const resp = await fetch(this.base + path, opts);
-        return resp.json();
+        let resp;
+        try {
+            resp = await fetch(this.base + path, opts);
+        } catch (netErr) {
+            return { success: false, status: 'NETWORK_ERROR', message: 'Connection error.' };
+        }
+        try {
+            return await resp.json();
+        } catch (parseErr) {
+            return {
+                success: false,
+                status: `HTTP_${resp.status}`,
+                message: `Server returned ${resp.status} ${resp.statusText || ''}`.trim(),
+            };
+        }
     },
 
     // Auth
@@ -274,8 +287,12 @@ function debounce(fn, wait = 700) {
  */
 function _messageFingerprint(messages) {
     if (!messages || !messages.length) return '0::';
-    const last = messages[messages.length - 1];
-    return `${messages.length}:${last.message_id}:${last.status}:${last.message}`;
+    let sig = `${messages.length}:`;
+    for (let i = 0; i < messages.length; i++) {
+        const m = messages[i];
+        sig += m.message_id + ':' + (m.status || '') + ':' + (m.message ? m.message.length : 0) + '|';
+    }
+    return sig;
 }
 
 async function extractRulesFromFile(file, targetTextareaId, fileNameDisplayId) {
@@ -874,7 +891,7 @@ function _buildMessageHTML(m) {
         if (imgSrc) {
             bubbleContent = `
                 <div class="msg-image-wrapper">
-                    <img class="msg-image" src="${imgSrc}" alt="Shared image" loading="lazy">
+                    <img class="msg-image" src="${escapeHtml(imgSrc)}" alt="Shared image" loading="lazy">
                 </div>
                 ${inlineSummary ? `<div class="msg-image-caption">${escapeHtml(inlineSummary)}</div>` : ''}`;
         } else {
@@ -901,7 +918,7 @@ function _buildMessageHTML(m) {
                         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                         <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                     </svg>
-                    <audio class="msg-audio-player" controls src="${audioSrc}" preload="metadata"></audio>
+                    <audio class="msg-audio-player" controls src="${escapeHtml(audioSrc)}" preload="metadata"></audio>
                 </div>
                 ${transcript ? `<div class="msg-audio-transcript">\u{1F3A4} ${escapeHtml(transcript)}</div>` : ''}`;
         } else {

@@ -12,12 +12,17 @@ from .db_manager import DBManager
 logger = setup_logging("user_store")
 
 
+def hash_password(password):
+    """Shared password hashing used for both user and group passwords."""
+    return hashlib.sha256((password or "").encode()).hexdigest()
+
+
 class UserStore:
     """Handles all user CRUD operations."""
 
     @staticmethod
     def _hash_password(password):
-        return hashlib.sha256(password.encode()).hexdigest()
+        return hash_password(password)
 
     @staticmethod
     def _generate_color():
