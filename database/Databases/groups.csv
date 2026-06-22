@@ -1,32 +1,32 @@
 group_id,group_name,admin_username,password,rules,moderation_sensitivity,created_at
-273A57,Engineering 2025,soham,12345,Be respectful.Be respectful. Only educational content.,,2026-02-21 12:56:15
-994055,Simpsons 2026,sohamjadhav95,12345,"Be respectful. only company related works and discussions, Spam or advertisements are not allowed. tech related content is allowed",,2026-02-21 13:04:49
-CC832A,Test Group 3.3,testuser33,group123,Be respectful.Only work-related topics allowed. No offensive content.,,2026-02-21 19:46:39
-D42174,Image Test Group,imgtest99,pass123,"Only professional content. No offensive or adult material.
+273A57,Engineering 2025,soham,5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5,Be respectful.Be respectful. Only educational content.,,2026-02-21 12:56:15
+994055,Simpsons 2026,sohamjadhav95,5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5,"Be respectful. only company related works and discussions, Spam or advertisements are not allowed. tech related content is allowed",,2026-02-21 13:04:49
+CC832A,Test Group 3.3,testuser33,27bc13859cf6e493f8b6780dba3febfb0b1db7bd31010a48e0334170c74bbce2,Be respectful.Only work-related topics allowed. No offensive content.,,2026-02-21 19:46:39
+D42174,Image Test Group,imgtest99,9b8769a4a742959a2d0298c36fb70623f2dfacda8436237df08d8dfd5b37374c,"Only professional content. No offensive or adult material.
 Be respectful.",,2026-02-21 20:09:16
-40AB66,Persist Test Group,persisttest,pass123,Be respectful.,,2026-02-21 20:24:28
-53CA26,TestGroup,testuser2,test,Be respectful,,2026-02-21 22:42:04
-DEC52D,Simpsons 2026,123456,123456,"Be respectful. General Movies and series related discussion and messages are allowed.
+40AB66,Persist Test Group,persisttest,9b8769a4a742959a2d0298c36fb70623f2dfacda8436237df08d8dfd5b37374c,Be respectful.,,2026-02-21 20:24:28
+53CA26,TestGroup,testuser2,9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08,Be respectful,,2026-02-21 22:42:04
+DEC52D,Simpsons 2026,123456,8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92,"Be respectful. General Movies and series related discussion and messages are allowed.
 watching movies cinemas web series related discussion is also allowed.",,2026-04-02 15:12:00
-F1D426,Study Circle,arjun_sharma,Test@1234,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",Moderate,2026-04-05 21:01:55
-5F231E,Study Circle,arjun_sharma,study123,"1. Only academic topics - no off-topic discussions
+F1D426,Study Circle,arjun_sharma,849f1575ccfbf3a4d6cf00e6c5641b7fd4da2ed3e212c2d79ba9161a5a432ff0,"Only academic topics no off-topic discussions, No abusive language or personal attacks, No sharing of pirated study material or answer keys, No promotional messages or spam links",Moderate,2026-04-05 21:01:55
+5F231E,Study Circle,arjun_sharma,358c608c74b67fd41bb81c644e03d22793fa4c156962d7996ff038d4d1f45d0e,"1. Only academic topics - no off-topic discussions
 2. No abusive language or personal attacks
 3. No sharing of pirated study material or answer keys
 4. No promotional messages or spam links
 5. English or Marathi only",Strict,2026-04-07 12:28:00
-00F450,Tech Talk,priya_patel,tech456,"1. Stay on tech topics - coding, tools, industry news
+00F450,Tech Talk,priya_patel,b1c0c2283e8eb80a2f9a740c2210ceeb980fa0ad8541b16bee705a1c9b3c606b,"1. Stay on tech topics - coding, tools, industry news
 2. No hate speech or discrimination
 3. No self-promotion without permission
 4. Mild language acceptable but no targeted abuse",Moderate,2026-04-07 12:34:32
-27D9DD,Study Circle,arjun_sharma,study123,"1. Only academic topics — no off-topic discussions
+27D9DD,Study Circle,arjun_sharma,358c608c74b67fd41bb81c644e03d22793fa4c156962d7996ff038d4d1f45d0e,"1. Only academic topics — no off-topic discussions
 2. No abusive language or personal attacks
 3. No sharing of pirated study material or answer keys
 4. No promotional messages or spam links
 5. English or Marathi only",Strict,2026-04-07 13:08:34
-743BDA,Tech Talk,priya_patel,tech456,"1. Stay on tech topics — coding, tools, industry news
+743BDA,Tech Talk,priya_patel,b1c0c2283e8eb80a2f9a740c2210ceeb980fa0ad8541b16bee705a1c9b3c606b,"1. Stay on tech topics — coding, tools, industry news
 2. No hate speech or discrimination
 3. No self-promotion without permission
 4. Mild language acceptable but no targeted abuse",Moderate,2026-04-07 13:08:34
-AD527B,Friends Hangout,sneha_more,hang789,"1. No threats or doxxing of any kind
+AD527B,Friends Hangout,sneha_more,a99041804705c1cf522c17b51b53df220fc8e1536271883f19126a717e52f365,"1. No threats or doxxing of any kind
 2. No NSFW content
 3. No political arguments",Relaxed,2026-04-07 13:08:34
