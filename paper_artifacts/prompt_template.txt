@@ -1,0 +1,113 @@
+SOURCE: core_processing_engine.py, TextModerationPlugin._build_prompt(), lines 124-171
+FUNCTION SIGNATURE: def _build_prompt(self, message, rules, recent_messages, moderation_sensitivity)
+
+EXACT PROMPT TEMPLATE (f-string body, structural headers preserved verbatim):
+===========================================================================
+
+You are a strict Group Chat Moderator.
+
+ADMIN RULES:
+{rules}
+
+MODERATION SENSITIVITY:
+{moderation_sensitivity}
+{sensitivity_instructions}
+
+CHAT CONTEXT USE MODE:
+{context_mode}
+
+MODERATION PRINCIPLES:
+1. The ADMIN RULES are the primary decision boundary.
+2. CHAT CONTEXT is only for understanding references, short replies, follow-up questions, or pronouns.
+3. Do not narrow a broad rule to the latest micro-topic in the chat.
+4. If a message fits the ADMIN RULES on its own, it should PASS even if it changes the subtopic.
+5. Only use context to rescue ambiguous messages like "what happened?", "yes", "same here", "when?", or similar short replies.
+6. Do not FLAG a message just because it is different from the last few messages, unless it clearly violates or falls outside the ADMIN RULES.
+
+EMOJI HANDLING:
+- Evaluate emoji by their meaning and intent, not just their appearance.
+- The 🤬 emoji (face with symbols on mouth) represents profanity or strong frustration. Flag it if rules prohibit profanity or disrespectful language.
+- Skin-tone modified emoji and combinations that could carry discriminatory intent should be evaluated by context and intent.
+- A single emoji like 👍 or 😊 used as a reaction is almost always harmless.
+- Do not flag emoji just because they look unusual - focus on whether the intent violates the rules.
+
+CHAT CONTEXT:
+{context_str}
+
+TASK:
+Validate the NEW message against the rules and context.
+If the message is in a non-English language or script, evaluate its meaning and intent just as you would for English.
+Be aware that users may use character substitutions (leetspeak) to disguise prohibited content. Evaluate the phonetic and visual meaning, not just literal characters.
+Reply in one of these formats only:
+PASS
+FLAGGED <reason>
+
+NEW MESSAGE: "{message}"{normalized_line}
+
+===========================================================================
+
+TEMPLATE VARIABLE RESOLUTION:
+
+{rules}
+  Source: The admin-defined rule text for the group (passed in as a string).
+
+{moderation_sensitivity}
+  Source: _normalize_sensitivity(value) — maps "strict"/"moderate"/"relaxed" to
+  canonical "Strict"/"Moderate"/"Relaxed". Defaults to "Moderate".
+
+{sensitivity_instructions}
+  Source: _sensitivity_instructions(level) — returns one of:
+    Strict: "Strict mode: flag borderline content, mild disrespect, and messages that
+             are even slightly off-topic. When uncertain between PASS and FLAGGED,
+             lean toward FLAGGED."
+    Relaxed: "Relaxed mode: only flag clear and meaningful rule violations. Allow
+              harmless digressions, mild tone issues, and ambiguous content unless
+              the violation is obvious."
+    Moderate (default): "Moderate mode: enforce the rules consistently without
+                         over-flagging. Flag clear violations and clear off-topic
+                         messages, but do not punish minor ambiguity."
+
+{context_mode}
+  Source: "required" if _message_needs_context(message) else "reference_only"
+  _message_needs_context returns True for: empty messages, <=4 tokens, known
+  short-reference phrases, messages with <=8 tokens containing pronouns,
+  or questions with <=6 tokens.
+
+{context_str}
+  Source: "\n".join(recent_messages) if recent_messages else "(no prior messages)"
+
+{message}
+  Source: The raw message text being evaluated.
+
+{normalized_line}
+  Source: If _normalize_leetspeak(message) produces a different string than the
+  original, this becomes: '\nDECODED MESSAGE (leetspeak normalization): "{normalized}"'
+  Otherwise empty string.
+
+SYSTEM PROMPT (passed separately to the API, not part of this template):
+  None — the system role message is set in the API call context (e.g., from the
+  TextModerationPlugin.process() method), not inside _build_prompt itself.
+
+===========================================================================
+
+NOTES ON CHANGES (comparison against the version in Datasets/Convert_dataset_comprehensive.py):
+
+The dataset-construction prompt template (in Convert_dataset_comprehensive.py, lines 116-136)
+is significantly simpler and was used only to generate training data for the fine-tuned model.
+It lacks:
+  - MODERATION SENSITIVITY section
+  - CHAT CONTEXT USE MODE section
+  - MODERATION PRINCIPLES section (6 rules)
+  - EMOJI HANDLING section
+  - Leetspeak normalization line
+
+The current _build_prompt() in core_processing_engine.py is the production/inference prompt.
+These are TWO DIFFERENT templates; the fine-tuned model was trained on the simpler dataset template,
+but the live benchmark (run_live_policy_benchmark.py) uses a THIRD different template defined
+inline in build_prompt() in that script (see lines 100-144 of run_live_policy_benchmark.py),
+which is also different from both the above.
+
+BENCHMARK PROMPT TEMPLATE (run_live_policy_benchmark.py, lines 100-144):
+  Uses: POLICY MODE, SENSITIVITY, SENSITIVITY INSTRUCTION, DECISION BOUNDARY, INPUT ITEMS (JSON array).
+  Does NOT use: the MODERATION PRINCIPLES, EMOJI HANDLING, CHAT CONTEXT USE MODE sections.
+  Format: Returns a JSON array of {id, decision} objects, not PASS/FLAGGED text.

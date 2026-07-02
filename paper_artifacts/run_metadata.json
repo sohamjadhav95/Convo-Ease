@@ -1,0 +1,27 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "api_base_url": "https://integrate.api.nvidia.com/v1",
+  "temperature": 0,
+  "top_p": 1,
+  "seed": "NOT SET — no seed parameter passed to client.chat.completions.create()",
+  "max_tokens": "dynamic: max(512, len(batch) * 80), batch_size=10 → max(512, 800) = 800 per batch",
+  "batch_size": 10,
+  "workers": 3,
+  "max_retries": 3,
+  "timeout_s": 120.0,
+  "run_timestamp": "NOT FOUND — run_live_policy_benchmark.py does not record a run timestamp in its output files. The output file mtime is 2026-06-23T13:44:28 (local, +05:30), which is the filesystem timestamp of when ROWS_CSV and SUMMARY_JSON were last written. This is the closest available proxy for the run completion time.",
+  "output_rows_csv_mtime": "2026-06-23T13:44:28.124278 (local +05:30)",
+  "output_summary_json_mtime": "2026-06-23T13:44:28.125279 (local +05:30)",
+  "script_mtime": "2026-06-22T13:23:27.170053 (local +05:30)",
+  "source_predictions_csv": "Fine_Tune/Results/PI3/predictions.csv",
+  "n_conditions": 4,
+  "conditions": ["generic_safety", "org_moderate", "org_relaxed", "org_strict"],
+  "n_messages_per_condition": 300,
+  "total_rows": 1200,
+  "notes": [
+    "No random seed was set. temperature=0 makes the API call deterministic for most providers, but seed is not guaranteed without an explicit seed parameter.",
+    "max_tokens is computed per batch: max(512, batch_size * 80). With default batch_size=10 this is 800.",
+    "The model string 'openai/gpt-oss-120b' is from the NVIDIA NIM routing prefix; 'gpt-oss-120b' is an internal NVIDIA alias.",
+    "run_live_policy_benchmark.py does not write a run_timestamp field to the summary JSON. The only timestamp evidence is the file mtime on ROWS_CSV and SUMMARY_JSON."
+  ]
+}

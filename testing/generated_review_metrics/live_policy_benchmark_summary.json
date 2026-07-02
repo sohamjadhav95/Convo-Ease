@@ -1,0 +1,104 @@
+{
+  "model": "openai/gpt-oss-120b",
+  "source": "E:\\Projects\\Personal\\Convo-Ease\\Fine_Tune\\Results\\PI3\\predictions.csv",
+  "conditions": {
+    "generic_safety": {
+      "metrics": {
+        "n": 300,
+        "tp": 69,
+        "fp": 14,
+        "fn": 81,
+        "tn": 136,
+        "accuracy": 0.6833,
+        "precision_flagged": 0.8313,
+        "recall_flagged": 0.46,
+        "f1_flagged": 0.5923
+      },
+      "batch_latency_ms": {
+        "batches": 297,
+        "mean": 435.42,
+        "p50": 433.94,
+        "p95": 522.8,
+        "max": 583.95
+      }
+    },
+    "org_moderate": {
+      "metrics": {
+        "n": 300,
+        "tp": 115,
+        "fp": 35,
+        "fn": 35,
+        "tn": 115,
+        "accuracy": 0.7667,
+        "precision_flagged": 0.7667,
+        "recall_flagged": 0.7667,
+        "f1_flagged": 0.7667
+      },
+      "batch_latency_ms": {
+        "batches": 300,
+        "mean": 469.78,
+        "p50": 470.09,
+        "p95": 559.33,
+        "max": 591.36
+      }
+    },
+    "org_relaxed": {
+      "metrics": {
+        "n": 300,
+        "tp": 53,
+        "fp": 6,
+        "fn": 97,
+        "tn": 144,
+        "accuracy": 0.6567,
+        "precision_flagged": 0.8983,
+        "recall_flagged": 0.3533,
+        "f1_flagged": 0.5072
+      },
+      "batch_latency_ms": {
+        "batches": 296,
+        "mean": 454.79,
+        "p50": 452.65,
+        "p95": 541.34,
+        "max": 647.6
+      }
+    },
+    "org_strict": {
+      "metrics": {
+        "n": 300,
+        "tp": 116,
+        "fp": 35,
+        "fn": 34,
+        "tn": 115,
+        "accuracy": 0.77,
+        "precision_flagged": 0.7682,
+        "recall_flagged": 0.7733,
+        "f1_flagged": 0.7708
+      },
+      "batch_latency_ms": {
+        "batches": 300,
+        "mean": 484.4,
+        "p50": 485.21,
+        "p95": 572.23,
+        "max": 646.51
+      }
+    }
+  },
+  "sensitivity_shifts_pp": {
+    "org_strict_vs_org_moderate": {
+      "precision_delta": 0.15,
+      "recall_delta": 0.66,
+      "accuracy_delta": 0.33
+    },
+    "org_relaxed_vs_org_moderate": {
+      "precision_delta": 13.16,
+      "recall_delta": -41.34,
+      "accuracy_delta": -11.0
+    }
+  },
+  "policy_as_prompt_delta_pp": {
+    "accuracy": 8.34,
+    "precision_flagged": -6.46,
+    "recall_flagged": 30.67,
+    "f1_flagged": 17.44
+  }
+}

@@ -1,0 +1,2 @@
+message_id,group_id,username,message,status,reason,summary,media_url,group_rules,timestamp,initial_status,initial_reason,detected_language,language_confidence,translated_message,appeal_status,appeal_text,appeal_ai_status,appeal_ai_reason,appeal_submitted_at,appeal_reviewed_by,appeal_reviewed_at,appeal_admin_note
+3a7b071b-eae3-4d96-9297-73cfa1aa7a7b,18728E,member1,[AUDIO],PASS,,Reminder about tomorrow's study session.,/media/audio/ddaa676e-dcd2-4233-9c7c-d3b95e307472.wav,Be respectful. No insults.,2026-06-22 13:15:11,PASS,,,,,,,,,,,,

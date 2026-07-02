@@ -1,0 +1,6 @@
+modality,stage,n,mean_ms,p50_ms,p90_ms,p95_ms,p99_ms,max_ms
+all,build_report,40,87.04,87.04,98.13,106.93,109.6,110.57
+all,read_messages,40,15.25,15.21,18.23,19.11,20.33,21.07
+audio,transcribe_summarize_moderate_store,40,883.52,879.29,964.43,977.06,1044.27,1067.26
+image,summarize_moderate_store,40,1254.93,1255.35,1352.07,1377.47,1402.22,1413.56
+text,moderate_and_store,40,455.06,463.5,500.43,506.36,513.44,514.13

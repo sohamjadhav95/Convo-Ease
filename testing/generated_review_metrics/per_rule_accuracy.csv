@@ -1,0 +1,16 @@
+rule_id,n,accuracy,precision_flagged,recall_flagged,rule_preview
+rule_01,32,0.875,0.8333,0.9375,Business group rules: - Professional language only. Slang and profanity are not allowed. - No off-topic personal convers
+rule_02,20,0.85,1.0,0.7692,Community guidelines: 1. Zero tolerance for hate speech or discrimination. 2. No threats of violence under any circumsta
+rule_03,15,0.7333,0.8571,0.6667,English only — no messages in other languages.
+rule_04,16,0.9375,1.0,0.8571,Study group rules: 1. No insults or aggressive language. 2. Questions must be related to current semester topics. 3. Sha
+rule_05,19,0.7368,0.8889,0.6667,"No hate speech, slurs, or personal attacks of any kind."
+rule_06,21,0.9048,0.9,0.9,"Group Guidelines: • Respect all members at all times. • No spam, flooding, or off-topic messages. • Constructive critici"
+rule_07,26,0.8846,1.0,0.8125,Keep all messages respectful. Insults and name-calling are not allowed.
+rule_08,17,0.8824,1.0,0.7143,"No spam, repeated messages, or unsolicited promotions."
+rule_09,21,0.7619,1.0,0.5,Stay on topic. Only discuss subjects relevant to this group.
+rule_10,16,0.8125,1.0,0.625,"No explicit, violent, or graphic content."
+rule_11,23,0.8261,0.9091,0.7692,"Rules: - No insults, slurs, or harassment. - No self-promotion or external links. - Keep discussions relevant to machine"
+rule_12,19,0.8947,0.8333,0.8333,No self-promotion or sharing personal links without admin approval.
+rule_13,19,0.8947,0.8571,0.8571,"No discrimination based on race, religion, gender, nationality, or sexuality."
+rule_14,17,0.9412,1.0,0.8571,Treat every member with respect. Harassment and bullying are strictly forbidden.
+rule_15,19,0.8421,1.0,0.6667,1. No hate speech or personal attacks. 2. No spam or repeated messages. 3. Stay on topic — this is a Python programming 

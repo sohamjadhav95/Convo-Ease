@@ -1,0 +1,16 @@
+rule_id,n,tp,fp,fn,tn,accuracy,precision_flagged,recall_flagged,f1_flagged,rule_preview
+rule_01,32,12,4,4,12,0.75,0.75,0.75,0.75,Business group rules: | - Professional language only. Slang and profanity are not allowed. | - No off-topic personal con
+rule_02,26,14,0,2,10,0.9231,1.0,0.875,0.9333,Keep all messages respectful. Insults and name-calling are not allowed.
+rule_03,23,7,4,6,6,0.5652,0.6364,0.5385,0.5833,"Rules: | - No insults, slurs, or harassment. | - No self-promotion or external links. | - Keep discussions relevant to m"
+rule_04,21,7,1,3,10,0.8095,0.875,0.7,0.7778,"Group Guidelines: | • Respect all members at all times. | • No spam, flooding, or off-topic messages. | • Constructive c"
+rule_05,21,8,3,2,8,0.7619,0.7273,0.8,0.7619,Stay on topic. Only discuss subjects relevant to this group.
+rule_06,20,10,0,3,7,0.85,1.0,0.7692,0.8696,Community guidelines: | 1. Zero tolerance for hate speech or discrimination. | 2. No threats of violence under any circu
+rule_07,19,8,2,4,5,0.6842,0.8,0.6667,0.7273,"No hate speech, slurs, or personal attacks of any kind."
+rule_08,19,5,6,1,7,0.6316,0.4545,0.8333,0.5882,No self-promotion or sharing personal links without admin approval.
+rule_09,19,6,3,1,9,0.7895,0.6667,0.8571,0.75,"No discrimination based on race, religion, gender, nationality, or sexuality."
+rule_10,19,5,4,4,6,0.5789,0.5556,0.5556,0.5556,1. No hate speech or personal attacks. | 2. No spam or repeated messages. | 3. Stay on topic — this is a Python programm
+rule_11,17,5,1,2,9,0.8235,0.8333,0.7143,0.7692,"No spam, repeated messages, or unsolicited promotions."
+rule_12,17,7,2,0,8,0.8824,0.7778,1.0,0.875,Treat every member with respect. Harassment and bullying are strictly forbidden.
+rule_13,16,6,3,1,6,0.75,0.6667,0.8571,0.75,Study group rules: | 1. No insults or aggressive language. | 2. Questions must be related to current semester topics. | 
+rule_14,16,7,0,1,8,0.9375,1.0,0.875,0.9333,"No explicit, violent, or graphic content."
+rule_15,15,8,2,1,4,0.8,0.8,0.8889,0.8421,English only — no messages in other languages.

@@ -1,0 +1,57 @@
+[
+  {
+    "modality": "all",
+    "stage": "build_report",
+    "n": 40,
+    "mean_ms": 87.04,
+    "p50_ms": 87.04,
+    "p90_ms": 98.13,
+    "p95_ms": 106.93,
+    "p99_ms": 109.6,
+    "max_ms": 110.57
+  },
+  {
+    "modality": "all",
+    "stage": "read_messages",
+    "n": 40,
+    "mean_ms": 15.25,
+    "p50_ms": 15.21,
+    "p90_ms": 18.23,
+    "p95_ms": 19.11,
+    "p99_ms": 20.33,
+    "max_ms": 21.07
+  },
+  {
+    "modality": "audio",
+    "stage": "transcribe_summarize_moderate_store",
+    "n": 40,
+    "mean_ms": 883.52,
+    "p50_ms": 879.29,
+    "p90_ms": 964.43,
+    "p95_ms": 977.06,
+    "p99_ms": 1044.27,
+    "max_ms": 1067.26
+  },
+  {
+    "modality": "image",
+    "stage": "summarize_moderate_store",
+    "n": 40,
+    "mean_ms": 1254.93,
+    "p50_ms": 1255.35,
+    "p90_ms": 1352.07,
+    "p95_ms": 1377.47,
+    "p99_ms": 1402.22,
+    "max_ms": 1413.56
+  },
+  {
+    "modality": "text",
+    "stage": "moderate_and_store",
+    "n": 40,
+    "mean_ms": 455.06,
+    "p50_ms": 463.5,
+    "p90_ms": 500.43,
+    "p95_ms": 506.36,
+    "p99_ms": 513.44,
+    "max_ms": 514.13
+  }
+]

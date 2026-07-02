@@ -1,0 +1,46 @@
+diff --git a/.env.example b/.env.example
+new file mode 100644
+--- /dev/null
++++ b/.env.example
+@@ -0,0 +1,12 @@
++# ConvoEase environment variables — copy to .env and fill in real values.
++# NEVER commit .env to git.
++
++# NVIDIA NIM API key (get from https://build.nvidia.com/settings/api-keys)
++NVIDIA_API_KEY=nvapi-REPLACE_WITH_YOUR_KEY
++
++# Optional overrides
++# NVIDIA_API_URL=https://integrate.api.nvidia.com/v1
++# CONVOEASE_TEXT_MODEL_ID=openai/gpt-oss-120b
++# CONVOEASE_IMAGE_MODEL_ID=meta/llama-3.2-90b-vision-instruct
++# CONVOEASE_MODEL_MODE=api
++# CONVOEASE_SECRET_KEY=change-me-in-production
+
+diff --git a/.gitignore b/.gitignore
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,4 +1,6 @@
++.env
++*.env
+ __pycache__/
+ *.pyc
+
+diff --git a/config.py b/config.py
+--- a/config.py
++++ b/config.py
+@@ -37,10 +37,8 @@ MEDIA_VIDEO_DIR = os.path.join(MEDIA_DIR, "video")
+ # --- API / Model Configuration -----------------------------------------------
+-# Hosted API credentials must come from environment variables.
+-# Testing-only fallback. Paste your NVIDIA key here if you want to run quickly
+-# without setting environment variables. Leave blank for normal env-based usage.
+-TESTING_NVIDIA_API_KEY = "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"
+-
++# API key must be set via NVIDIA_API_KEY environment variable (or a .env file).
++# See .env.example. Do NOT paste the key here.
+ _API_KEY = (
+     os.getenv("NVIDIA_API_KEY")
+     or os.getenv("NVIDIA_NIM_API_KEY")
+     or os.getenv("CONVOEASE_API_KEY")
+-    or TESTING_NVIDIA_API_KEY.strip()
+     or ""
+ )

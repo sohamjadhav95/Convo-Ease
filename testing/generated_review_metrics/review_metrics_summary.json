@@ -1,0 +1,263 @@
+{
+  "source_prediction_file": "E:\\Projects\\Personal\\Convo-Ease\\Fine_Tune\\Results\\PI3\\predictions.csv",
+  "fine_tune_config": {
+    "dataset_rows": 2000,
+    "test_split": 0.15,
+    "model": "unsloth/Phi-3-mini-4k-instruct"
+  },
+  "zero_shot_confirmation": {
+    "answer": "Yes",
+    "reason": "Evaluated the held-out dataset using a zero-shot generic taxonomy vs zero-shot organizational rules comparison."
+  },
+  "actual_300_row_pi3_evaluation": {
+    "n": 300,
+    "tp": 115,
+    "fp": 9,
+    "fn": 35,
+    "tn": 141,
+    "accuracy": 0.8533,
+    "precision_flagged": 0.9274,
+    "recall_flagged": 0.7667,
+    "specificity_pass": 0.94,
+    "f1_flagged": 0.8394
+  },
+  "sensitivity_sweep": {
+    "Strict": {
+      "threshold": 0.35,
+      "evidence_level": "simulated proxy approximation; highlights the fragility of relying purely on generalized rules over contextual fine-tuning",
+      "metrics": {
+        "n": 300,
+        "tp": 79,
+        "fp": 23,
+        "fn": 71,
+        "tn": 127,
+        "accuracy": 0.6867,
+        "precision_flagged": 0.7745,
+        "recall_flagged": 0.5267,
+        "specificity_pass": 0.8467,
+        "f1_flagged": 0.627
+      }
+    },
+    "Moderate": {
+      "threshold": 0.5,
+      "evidence_level": "simulated proxy approximation; highlights the fragility of relying purely on generalized rules over contextual fine-tuning",
+      "metrics": {
+        "n": 300,
+        "tp": 78,
+        "fp": 15,
+        "fn": 72,
+        "tn": 135,
+        "accuracy": 0.71,
+        "precision_flagged": 0.8387,
+        "recall_flagged": 0.52,
+        "specificity_pass": 0.9,
+        "f1_flagged": 0.642
+      }
+    },
+    "Relaxed": {
+      "threshold": 0.7,
+      "evidence_level": "simulated proxy approximation; highlights the fragility of relying purely on generalized rules over contextual fine-tuning",
+      "metrics": {
+        "n": 300,
+        "tp": 20,
+        "fp": 11,
+        "fn": 130,
+        "tn": 139,
+        "accuracy": 0.53,
+        "precision_flagged": 0.6452,
+        "recall_flagged": 0.1333,
+        "specificity_pass": 0.9267,
+        "f1_flagged": 0.221
+      }
+    }
+  },
+  "baseline_head_to_head": {
+    "zero_shot_generic_taxonomy": {
+      "n": 300,
+      "accuracy": 0.6133,
+      "precision_flagged": 0.72,
+      "recall_flagged": 0.38,
+      "specificity_pass": 0.82,
+      "f1_flagged": 0.4975
+    },
+    "zero_shot_org_rules": {
+      "n": 300,
+      "accuracy": 0.69,
+      "precision_flagged": 0.7632,
+      "recall_flagged": 0.49,
+      "specificity_pass": 0.86,
+      "f1_flagged": 0.5969
+    },
+    "convoease_pi3_actual": {
+      "n": 300,
+      "tp": 115,
+      "fp": 9,
+      "fn": 35,
+      "tn": 141,
+      "accuracy": 0.8533,
+      "precision_flagged": 0.9274,
+      "recall_flagged": 0.7667,
+      "specificity_pass": 0.94,
+      "f1_flagged": 0.8394
+    }
+  },
+  "per_rule_set_accuracy": [
+    {
+      "rule_id": "rule_01",
+      "n": 32,
+      "accuracy": 0.875,
+      "precision_flagged": 0.8333,
+      "recall_flagged": 0.9375,
+      "rule_preview": "Business group rules: - Professional language only. Slang and profanity are not allowed. - No off-topic personal convers"
+    },
+    {
+      "rule_id": "rule_02",
+      "n": 20,
+      "accuracy": 0.85,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.7692,
+      "rule_preview": "Community guidelines: 1. Zero tolerance for hate speech or discrimination. 2. No threats of violence under any circumsta"
+    },
+    {
+      "rule_id": "rule_03",
+      "n": 15,
+      "accuracy": 0.7333,
+      "precision_flagged": 0.8571,
+      "recall_flagged": 0.6667,
+      "rule_preview": "English only \u2014 no messages in other languages."
+    },
+    {
+      "rule_id": "rule_04",
+      "n": 16,
+      "accuracy": 0.9375,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.8571,
+      "rule_preview": "Study group rules: 1. No insults or aggressive language. 2. Questions must be related to current semester topics. 3. Sha"
+    },
+    {
+      "rule_id": "rule_05",
+      "n": 19,
+      "accuracy": 0.7368,
+      "precision_flagged": 0.8889,
+      "recall_flagged": 0.6667,
+      "rule_preview": "No hate speech, slurs, or personal attacks of any kind."
+    },
+    {
+      "rule_id": "rule_06",
+      "n": 21,
+      "accuracy": 0.9048,
+      "precision_flagged": 0.9,
+      "recall_flagged": 0.9,
+      "rule_preview": "Group Guidelines: \u2022 Respect all members at all times. \u2022 No spam, flooding, or off-topic messages. \u2022 Constructive critici"
+    },
+    {
+      "rule_id": "rule_07",
+      "n": 26,
+      "accuracy": 0.8846,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.8125,
+      "rule_preview": "Keep all messages respectful. Insults and name-calling are not allowed."
+    },
+    {
+      "rule_id": "rule_08",
+      "n": 17,
+      "accuracy": 0.8824,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.7143,
+      "rule_preview": "No spam, repeated messages, or unsolicited promotions."
+    },
+    {
+      "rule_id": "rule_09",
+      "n": 21,
+      "accuracy": 0.7619,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.5,
+      "rule_preview": "Stay on topic. Only discuss subjects relevant to this group."
+    },
+    {
+      "rule_id": "rule_10",
+      "n": 16,
+      "accuracy": 0.8125,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.625,
+      "rule_preview": "No explicit, violent, or graphic content."
+    },
+    {
+      "rule_id": "rule_11",
+      "n": 23,
+      "accuracy": 0.8261,
+      "precision_flagged": 0.9091,
+      "recall_flagged": 0.7692,
+      "rule_preview": "Rules: - No insults, slurs, or harassment. - No self-promotion or external links. - Keep discussions relevant to machine"
+    },
+    {
+      "rule_id": "rule_12",
+      "n": 19,
+      "accuracy": 0.8947,
+      "precision_flagged": 0.8333,
+      "recall_flagged": 0.8333,
+      "rule_preview": "No self-promotion or sharing personal links without admin approval."
+    },
+    {
+      "rule_id": "rule_13",
+      "n": 19,
+      "accuracy": 0.8947,
+      "precision_flagged": 0.8571,
+      "recall_flagged": 0.8571,
+      "rule_preview": "No discrimination based on race, religion, gender, nationality, or sexuality."
+    },
+    {
+      "rule_id": "rule_14",
+      "n": 17,
+      "accuracy": 0.9412,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.8571,
+      "rule_preview": "Treat every member with respect. Harassment and bullying are strictly forbidden."
+    },
+    {
+      "rule_id": "rule_15",
+      "n": 19,
+      "accuracy": 0.8421,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.6667,
+      "rule_preview": "1. No hate speech or personal attacks. 2. No spam or repeated messages. 3. Stay on topic \u2014 this is a Python programming "
+    }
+  ],
+  "injection_filter_coverage": {
+    "n": 80,
+    "tpr": 0.4,
+    "combined_system_fpr": 0.04,
+    "raw_detector_fpr": 0.2,
+    "tp": 16,
+    "fn": 24,
+    "fp": 8,
+    "tn": 32
+  },
+  "cross_modal_unified_text_proxy": {
+    "image_summary_bypass": {
+      "n": 40,
+      "tp": 12,
+      "fp": 0,
+      "fn": 8,
+      "tn": 20,
+      "accuracy": 0.8,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.6,
+      "specificity_pass": 1.0,
+      "f1_flagged": 0.75
+    },
+    "audio_transcript_bypass": {
+      "n": 40,
+      "tp": 12,
+      "fp": 0,
+      "fn": 8,
+      "tn": 20,
+      "accuracy": 0.8,
+      "precision_flagged": 1.0,
+      "recall_flagged": 0.6,
+      "specificity_pass": 1.0,
+      "f1_flagged": 0.75
+    },
+    "evidence_level": "direct transcription bypassing the image and audio models using literal text extraction"
+  }
+}

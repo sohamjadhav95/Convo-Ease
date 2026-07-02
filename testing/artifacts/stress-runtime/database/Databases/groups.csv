@@ -1,0 +1,2 @@
+group_id,group_name,admin_username,password,rules,moderation_sensitivity,created_at
+348BB6,Locust Demo Group,load_admin,123b1bf932b8d863f41e07dba383d23d5ff9b54fdfd3d33695f3fe76d861f319,Be respectful. No insults.,Moderate,2026-06-22 13:13:46

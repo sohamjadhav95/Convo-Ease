@@ -183,7 +183,7 @@ def install_test_ai(monkeypatch=None):
         self.config = model_config
         self._backend = FakeTextBackend()
 
-    def fake_image_init(self, text_model_config, vision_model_config):
+    def fake_image_init(self, text_model_config, vision_model_config, text_moderator=None):
         self.text_config = text_model_config
         self.vision_config = vision_model_config
         self.backend = vision_model_config.get("backend", "api")
@@ -191,7 +191,7 @@ def install_test_ai(monkeypatch=None):
         self._vision_pipeline = None
         self._text_moderator = TextModerationPlugin(text_model_config)
 
-    def fake_audio_init(self, text_model_config, audio_model_config):
+    def fake_audio_init(self, text_model_config, audio_model_config, text_moderator=None):
         self.text_config = text_model_config
         self.audio_config = audio_model_config
         self.backend = audio_model_config.get("backend", "api")
@@ -211,3 +211,4 @@ def install_test_ai(monkeypatch=None):
 
 def encode_payload(text):
     return base64.b64encode(text.encode("utf-8")).decode("utf-8")
+

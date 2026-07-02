@@ -1,0 +1,2 @@
+Method,Name,Error,Occurrences
+POST,/api/groups/[id]/messages POST,HTTPError('500 Server Error: INTERNAL SERVER ERROR for url: /api/groups/[id]/messages POST'),1
