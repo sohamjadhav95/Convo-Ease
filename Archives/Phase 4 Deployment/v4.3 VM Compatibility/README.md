@@ -214,9 +214,9 @@ Important:
 
 - Do not hardcode API keys in `config.py` or commit them to Git
 - For PowerShell, set the key in the current shell before running the app:
-  `$env:NVIDIA_API_KEY="nvapi-..."`
+  `$env:NVIDIA_API_KEY="your-api-key-here"`
 - For a permanent Windows user-level variable:
-  `[System.Environment]::SetEnvironmentVariable("NVIDIA_API_KEY", "nvapi-...", "User")`
+  `[System.Environment]::SetEnvironmentVariable("NVIDIA_API_KEY", "your-api-key-here", "User")`
 
 Text local settings:
 
@@ -290,7 +290,7 @@ PowerShell:
 $env:CONVOEASE_MODEL_MODE="api"
 $env:CONVOEASE_TEXT_BACKEND="local"
 $env:CONVOEASE_IMAGE_BACKEND="api"
-$env:NVIDIA_API_KEY="nvapi-..."
+$env:NVIDIA_API_KEY="your-api-key-here"
 $env:CONVOEASE_TEXT_MODEL_PATH="E:\models\Qwen2.5-3B-Instruct"
 python run.py
 ```
@@ -301,7 +301,7 @@ PowerShell:
 
 ```powershell
 $env:CONVOEASE_MODEL_MODE="api"
-$env:NVIDIA_API_KEY="nvapi-..."
+$env:NVIDIA_API_KEY="your-api-key-here"
 python run.py
 ```
 

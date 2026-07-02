@@ -7,7 +7,7 @@ new file mode 100644
 +# NEVER commit .env to git.
 +
 +# NVIDIA NIM API key (get from https://build.nvidia.com/settings/api-keys)
-+NVIDIA_API_KEY=nvapi-REPLACE_WITH_YOUR_KEY
++NVIDIA_API_KEY=your-api-key-here
 +
 +# Optional overrides
 +# NVIDIA_API_URL=https://integrate.api.nvidia.com/v1
@@ -33,7 +33,7 @@ diff --git a/config.py b/config.py
 -# Hosted API credentials must come from environment variables.
 -# Testing-only fallback. Paste your NVIDIA key here if you want to run quickly
 -# without setting environment variables. Leave blank for normal env-based usage.
--TESTING_NVIDIA_API_KEY = "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"
+-TESTING_NVIDIA_API_KEY = "your-api-key-here"
 -
 +# API key must be set via NVIDIA_API_KEY environment variable (or a .env file).
 +# See .env.example. Do NOT paste the key here.

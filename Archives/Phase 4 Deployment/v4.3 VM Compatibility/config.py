@@ -36,7 +36,7 @@ CHATS_FILE = os.path.join(DATABASE_DIR, "group_chats.csv")
 # Hosted API credentials must come from environment variables.
 # Testing-only fallback. Paste your NVIDIA key here if you want to run quickly
 # without setting environment variables. Leave blank for normal env-based usage.
-TESTING_NVIDIA_API_KEY = "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"
+TESTING_NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 
 _API_KEY = (
     os.getenv("NVIDIA_API_KEY")

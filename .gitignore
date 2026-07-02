@@ -20,3 +20,7 @@ venv/
 
 # Log files
 *.log
+
+# Release exclusions
+Fine_Tune/
+paper_artifacts/benchmark_raw_1200.csv

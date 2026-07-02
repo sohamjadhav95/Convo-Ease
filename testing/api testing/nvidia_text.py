@@ -1,8 +1,9 @@
+import os
 from openai import OpenAI
 
 client = OpenAI(
   base_url = "https://integrate.api.nvidia.com/v1",
-  api_key = "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"
+  api_key = os.environ.get("NVIDIA_API_KEY", "")
 )
 
 completion = client.chat.completions.create(

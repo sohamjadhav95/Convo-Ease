@@ -40,3 +40,7 @@ pyttsx3
 # Notes
 # - Standard library modules such as uuid, os, sys, base64, io, datetime,
 #   and logging do not need separate installation.
+
+# Added for verification scripts
+statsmodels
+scipy

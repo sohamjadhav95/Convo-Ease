@@ -1,9 +1,10 @@
+import os
 import requests, base64, json, mimetypes
 
 invoke_url = "https://integrate.api.nvidia.com/v1/chat/completions"
 stream = True
 
-API_KEY = "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"  # your key
+API_KEY = os.environ.get("NVIDIA_API_KEY", "")  # your key
 
 
 def encode_image(image_path):

@@ -218,9 +218,9 @@ Important:
 
 - Do not hardcode API keys in `config.py` or commit them to Git
 - For PowerShell, set the key in the current shell before running the app:
-  `$env:NVIDIA_API_KEY="nvapi-..."`
+  `$env:NVIDIA_API_KEY="your-api-key-here"`
 - For a permanent Windows user-level variable:
-  `[System.Environment]::SetEnvironmentVariable("NVIDIA_API_KEY", "nvapi-...", "User")`
+  `[System.Environment]::SetEnvironmentVariable("NVIDIA_API_KEY", "your-api-key-here", "User")`
 
 Text local settings:
 
@@ -294,7 +294,7 @@ PowerShell:
 $env:CONVOEASE_MODEL_MODE="api"
 $env:CONVOEASE_TEXT_BACKEND="local"
 $env:CONVOEASE_IMAGE_BACKEND="api"
-$env:NVIDIA_API_KEY="nvapi-..."
+$env:NVIDIA_API_KEY="your-api-key-here"
 $env:CONVOEASE_TEXT_MODEL_PATH="E:\models\Qwen2.5-3B-Instruct"
 python run.py
 ```
@@ -305,7 +305,7 @@ PowerShell:
 
 ```powershell
 $env:CONVOEASE_MODEL_MODE="api"
-$env:NVIDIA_API_KEY="nvapi-..."
+$env:NVIDIA_API_KEY="your-api-key-here"
 python run.py
 ```
 
@@ -372,6 +372,36 @@ pytest testing/e2e -q
 python testing/stress/run_mock_server.py
 locust -f testing/stress/locustfile.py --host http://127.0.0.1:5000
 ```
+
+## Reproducing the paper results
+
+To reproduce the exact numbers from the paper's result tables, you can run the evaluation scripts against the published prediction data.
+
+1. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+   *Make sure `pandas`, `statsmodels`, and `scipy` are installed.*
+
+2. **Set your API key (optional for recomputation)**:
+   The raw predictions are already provided. If you intend to run the full benchmark suite to generate new predictions, set your API key:
+   - PowerShell: `$env:NVIDIA_API_KEY="your-api-key-here"`
+   - Bash: `export NVIDIA_API_KEY="your-api-key-here"`
+
+3. **Run the evaluation scripts**:
+   - For per-rule accuracies and general metrics:
+     ```bash
+     python paper_artifacts/scripts/per_rule_accuracy_org_moderate.py
+     ```
+   - For McNemar's tests (significance):
+     ```bash
+     python paper_artifacts/scripts/mcnemar_tests.py
+     ```
+   - For other metrics:
+     ```bash
+     python paper_artifacts/scripts/compute_metrics.py
+     python paper_artifacts/scripts/verify_rows_vs_summary.py
+     ```
 
 ## Notes
 

@@ -1,5 +1,0 @@
-{
-  "dataset_rows": 2000,
-  "test_split": 0.15,
-  "model": "unsloth/Phi-3-mini-4k-instruct"
-}
