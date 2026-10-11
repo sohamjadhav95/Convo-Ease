@@ -1,0 +1,26 @@
+# Keep the image small: only the app itself goes in.
+.git
+.github
+.env
+.venv
+venv
+**/__pycache__/
+**/*.py[cod]
+.pytest_cache/
+
+# Research, history and tests
+Archives/
+Datasets/
+paper_artifacts/
+paper_artifacts.zip
+testing/
+docs/screenshots/
+
+# Local data (use DATABASE_URL in production)
+database/Databases/
+database/media/
+database/*.db
+database/*.db-*
+logs/
+Models/**/*
+!Models/**/README.md

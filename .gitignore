@@ -24,3 +24,9 @@ venv/
 # Release exclusions
 Fine_Tune/
 paper_artifacts/benchmark_raw_1200.csv
+
+# Local database files
+*.db
+*.db-wal
+*.db-shm
+logs/

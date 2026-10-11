@@ -1,0 +1,6 @@
+# For reproducing the paper results (paper_artifacts/scripts, testing/analysis).
+# Not needed to run the app.
+pandas>=2.2
+statsmodels
+scipy
+requests>=2.32
