@@ -27,7 +27,14 @@ None of these ask for a credit card on their free plans (at the time of writing)
 2. On the project dashboard click **Connect** and copy the connection string. It looks like:
    `postgresql://user:password@ep-something.aws.neon.tech/neondb?sslmode=require`
 
+Already have a Vercel account? You can create the same free Neon database there instead:
+Vercel dashboard → **Storage** → **Create Database** → **Neon** → Free plan. Then copy the
+`DATABASE_URL` value it shows (any of the Postgres URLs work).
+
 ConvoEase creates its tables by itself on first start. Nothing else to do here.
+
+> Vercel itself is not a good home for the app: its functions limit uploads to 4.5 MB
+> and cut long AI calls short. Use it for the database only, and run the app on Render.
 
 ## Step 3 — Deploy the app on Render (5 minutes)
 
