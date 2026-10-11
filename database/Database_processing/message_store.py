@@ -5,10 +5,11 @@ All message-related database operations: save, load, flagged, summaries, analyti
 
 import uuid
 from collections import Counter, defaultdict
-from datetime import datetime
 
-from config import CHATS_FILE, setup_logging
-from .db_manager import DBManager
+from sqlalchemy import and_, insert, or_, select, update
+
+from config import setup_logging
+from .db_manager import DBManager, messages, utc_now
 
 logger = setup_logging("message_store")
 
@@ -24,15 +25,12 @@ class MessageStore:
     )
 
     @staticmethod
-    def _now():
-        return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    @staticmethod
     def load_messages(group_id=None):
-        df = DBManager.read_csv(CHATS_FILE)
+        """All messages (any status), oldest first."""
+        query = select(messages).order_by(messages.c.seq)
         if group_id:
-            df = df[df["group_id"] == group_id]
-        return df
+            query = query.where(messages.c.group_id == group_id)
+        return DBManager.fetch_all(query)
 
     @staticmethod
     def save_message(
@@ -58,66 +56,80 @@ class MessageStore:
         appeal_reviewed_at="",
         appeal_admin_note="",
     ):
-        initial_status = initial_status or status
-        initial_reason = initial_reason if initial_reason != "" else reason
-        new_msg = {
-            "message_id": str(uuid.uuid4()),
-            "group_id": group_id,
-            "username": username,
-            "message": message,
-            "status": status,
-            "reason": reason,
-            "summary": summary,
-            "media_url": media_url,
-            "group_rules": group_rules,
-            "timestamp": MessageStore._now(),
-            "initial_status": initial_status,
-            "initial_reason": initial_reason,
-            "detected_language": detected_language,
-            "language_confidence": language_confidence,
-            "translated_message": translated_message,
-            "appeal_status": appeal_status,
-            "appeal_text": appeal_text,
-            "appeal_ai_status": appeal_ai_status,
-            "appeal_ai_reason": appeal_ai_reason,
-            "appeal_submitted_at": appeal_submitted_at,
-            "appeal_reviewed_by": appeal_reviewed_by,
-            "appeal_reviewed_at": appeal_reviewed_at,
-            "appeal_admin_note": appeal_admin_note,
-        }
-        DBManager.append_row(CHATS_FILE, new_msg)
+        message_id = str(uuid.uuid4())
+        DBManager.execute(insert(messages).values(
+            message_id=message_id,
+            group_id=group_id,
+            username=username,
+            message=message or "",
+            status=status,
+            reason=reason or "",
+            summary=summary or "",
+            media_url=media_url or "",
+            group_rules=group_rules or "",
+            timestamp=utc_now(),
+            initial_status=initial_status or status,
+            initial_reason=initial_reason if initial_reason != "" else (reason or ""),
+            detected_language=detected_language or "",
+            language_confidence=str(language_confidence or ""),
+            translated_message=translated_message or "",
+            appeal_status=appeal_status or "",
+            appeal_text=appeal_text or "",
+            appeal_ai_status=appeal_ai_status or "",
+            appeal_ai_reason=appeal_ai_reason or "",
+            appeal_submitted_at=appeal_submitted_at or "",
+            appeal_reviewed_by=appeal_reviewed_by or "",
+            appeal_reviewed_at=appeal_reviewed_at or "",
+            appeal_admin_note=appeal_admin_note or "",
+        ))
         logger.info("Message saved: [%s] %s in group %s", status, username, group_id)
-        return new_msg["message_id"]
+        return message_id
 
     @staticmethod
-    def get_visible_messages(group_id):
-        msgs = MessageStore.load_messages(group_id)
-        visible = msgs[msgs["status"].isin(["PASS", "DELETED"])].sort_values("timestamp")
-        return visible.to_dict("records")
+    def get_visible_messages(group_id, after_seq=0, limit=None, own_flagged_for=None):
+        """Messages members can see (PASS and DELETED), oldest first.
+
+        own_flagged_for: also include that user's own FLAGGED messages, so they
+        can see what was held and appeal it.
+        limit: return only the newest N matching messages.
+        """
+        visible = messages.c.status.in_(["PASS", "DELETED"])
+        if own_flagged_for:
+            visible = or_(visible, and_(messages.c.status == "FLAGGED", messages.c.username == own_flagged_for))
+        query = select(messages).where(and_(messages.c.group_id == group_id, visible))
+        if after_seq:
+            query = query.where(messages.c.seq > after_seq)
+        if limit:
+            rows = DBManager.fetch_all(query.order_by(messages.c.seq.desc()).limit(limit))
+            return rows[::-1]
+        return DBManager.fetch_all(query.order_by(messages.c.seq))
 
     @staticmethod
     def get_recent_messages(group_id, limit=25, include_flagged=False):
-        msgs = MessageStore.load_messages(group_id).sort_values("timestamp")
+        query = select(messages).where(messages.c.group_id == group_id)
         if not include_flagged:
-            msgs = msgs[msgs["status"] == "PASS"]
+            query = query.where(messages.c.status == "PASS")
+        query = query.order_by(messages.c.seq.desc())
         if limit > 0:
-            msgs = msgs.tail(limit)
-        return msgs.to_dict("records")
+            query = query.limit(limit)
+        return DBManager.fetch_all(query)[::-1]
 
     @staticmethod
     def get_flagged_messages(group_id):
-        msgs = MessageStore.load_messages(group_id)
-        flagged = msgs[msgs["status"] == "FLAGGED"].sort_values("timestamp", ascending=False)
+        query = (
+            select(messages)
+            .where(and_(messages.c.group_id == group_id, messages.c.status == "FLAGGED"))
+            .order_by(messages.c.seq.desc())
+        )
         records = []
-        for row in flagged.to_dict("records"):
+        for row in DBManager.fetch_all(query):
             if MessageStore._is_system_failure_reason(row.get("reason", "")):
                 continue
-            category = MessageStore._categorize_reason(
+            row["category"] = MessageStore._categorize_reason(
                 row.get("reason", ""),
                 row.get("message", ""),
                 row.get("summary", "")
             )
-            row["category"] = category
             row["appeal_pending"] = str(row.get("appeal_status", "")).upper() == "PENDING_ADMIN"
             records.append(row)
         return records
@@ -230,6 +242,7 @@ class MessageStore:
             "username": str(row.get("username", "")),
             "display": display,
             "type": MessageStore._message_type(row.get("message", "")),
+            "media_url": str(row.get("media_url", "")),
             "reason": str(row.get("reason", "")),
             "category": category,
             "detected_language": str(row.get("detected_language", "")),
@@ -241,82 +254,88 @@ class MessageStore:
 
     @staticmethod
     def get_message(group_id, message_id):
-        msgs = MessageStore.load_messages(group_id)
-        target = msgs[msgs["message_id"] == message_id]
-        if target.empty:
-            return None
-        return target.iloc[0].to_dict()
+        return DBManager.fetch_one(select(messages).where(and_(
+            messages.c.group_id == group_id,
+            messages.c.message_id == message_id,
+        )))
+
+    @staticmethod
+    def find_by_media_url(media_url):
+        return DBManager.fetch_one(select(messages).where(messages.c.media_url == media_url).limit(1))
+
+    @staticmethod
+    def _update_message(group_id, message_id, **values):
+        DBManager.execute(
+            update(messages)
+            .where(and_(messages.c.group_id == group_id, messages.c.message_id == message_id))
+            .values(**values)
+        )
 
     @staticmethod
     def soft_delete_message(group_id, message_id, requesting_username):
         """Soft-delete a message. Replaces content with [deleted]. Returns (success, message)."""
-        msgs = DBManager.read_csv(CHATS_FILE)
-        mask = (msgs["group_id"] == group_id) & (msgs["message_id"] == message_id)
-        if mask.sum() == 0:
+        row = MessageStore.get_message(group_id, message_id)
+        if not row:
             return False, "Message not found."
-
-        row = msgs.loc[mask].iloc[0]
         if str(row.get("username", "")) != requesting_username:
             return False, "You can only delete your own messages."
-
         if str(row.get("message", "")) == "[deleted]":
             return False, "Message already deleted."
 
-        msgs.loc[mask, "message"] = "[deleted]"
-        msgs.loc[mask, "summary"] = ""
-        msgs.loc[mask, "status"] = "DELETED"
-        msgs.loc[mask, "reason"] = "Deleted by sender."
-        DBManager.write_csv(CHATS_FILE, msgs)
-        logger.info(f"Message {message_id} soft-deleted by {requesting_username} in group {group_id}")
+        MessageStore._update_message(
+            group_id, message_id,
+            message="[deleted]", summary="", media_url="", status="DELETED", reason="Deleted by sender.",
+        )
+        logger.info("Message %s soft-deleted by %s in group %s", message_id, requesting_username, group_id)
         return True, "Message deleted."
 
     @staticmethod
     def submit_appeal(group_id, message_id, appeal_text, appeal_result):
-        msgs = MessageStore.load_messages(group_id)
-        mask = (msgs["group_id"] == group_id) & (msgs["message_id"] == message_id)
-        if mask.sum() == 0:
+        if not MessageStore.get_message(group_id, message_id):
             return False
-
-        msgs.loc[mask, "appeal_text"] = appeal_text
-        msgs.loc[mask, "appeal_status"] = "PENDING_ADMIN"
-        msgs.loc[mask, "appeal_ai_status"] = appeal_result.get("status", "")
-        msgs.loc[mask, "appeal_ai_reason"] = appeal_result.get("reason", "")
-        msgs.loc[mask, "appeal_submitted_at"] = MessageStore._now()
-        msgs.loc[mask, "appeal_reviewed_by"] = ""
-        msgs.loc[mask, "appeal_reviewed_at"] = ""
-        msgs.loc[mask, "appeal_admin_note"] = ""
-        DBManager.write_csv(CHATS_FILE, msgs)
+        MessageStore._update_message(
+            group_id, message_id,
+            appeal_text=appeal_text,
+            appeal_status="PENDING_ADMIN",
+            appeal_ai_status=appeal_result.get("status", ""),
+            appeal_ai_reason=appeal_result.get("reason", ""),
+            appeal_submitted_at=utc_now(),
+            appeal_reviewed_by="",
+            appeal_reviewed_at="",
+            appeal_admin_note="",
+        )
         return True
 
     @staticmethod
     def resolve_appeal(group_id, message_id, approved, admin_username, admin_note=""):
-        msgs = MessageStore.load_messages(group_id)
-        mask = (msgs["group_id"] == group_id) & (msgs["message_id"] == message_id)
-        if mask.sum() == 0:
+        row = MessageStore.get_message(group_id, message_id)
+        if not row:
             return False
 
-        review_status = "APPROVED" if approved else "REJECTED"
-        msgs.loc[mask, "appeal_status"] = review_status
-        msgs.loc[mask, "appeal_reviewed_by"] = admin_username
-        msgs.loc[mask, "appeal_reviewed_at"] = MessageStore._now()
-        msgs.loc[mask, "appeal_admin_note"] = admin_note
-
+        values = {
+            "appeal_status": "APPROVED" if approved else "REJECTED",
+            "appeal_reviewed_by": admin_username,
+            "appeal_reviewed_at": utc_now(),
+            "appeal_admin_note": admin_note,
+        }
         if approved:
-            msgs.loc[mask, "status"] = "PASS"
-            msgs.loc[mask, "reason"] = admin_note or "Approved on appeal by admin."
+            values["status"] = "PASS"
+            values["reason"] = admin_note or "Approved on appeal by admin."
         else:
-            ai_reason = str(msgs.loc[mask, "appeal_ai_reason"].iloc[0] or "").strip()
-            msgs.loc[mask, "status"] = "FLAGGED"
-            msgs.loc[mask, "reason"] = admin_note or ai_reason or str(msgs.loc[mask, "initial_reason"].iloc[0] or "")
+            ai_reason = str(row.get("appeal_ai_reason") or "").strip()
+            values["status"] = "FLAGGED"
+            values["reason"] = admin_note or ai_reason or str(row.get("initial_reason") or "")
 
-        DBManager.write_csv(CHATS_FILE, msgs)
+        MessageStore._update_message(group_id, message_id, **values)
         return True
 
     @staticmethod
     def get_moderation_report(group_id):
-        msgs = MessageStore.load_messages(group_id)
-        if not msgs.empty:
-            msgs = msgs[~msgs["reason"].apply(MessageStore._is_system_failure_reason)]
+        rows = [
+            row for row in MessageStore.load_messages(group_id)
+            if row["status"] in ("PASS", "FLAGGED")
+            and not MessageStore._is_system_failure_reason(row.get("reason", ""))
+        ]
         empty = {
             "total_messages": 0,
             "pass_count": 0,
@@ -326,6 +345,7 @@ class MessageStore:
             "text_count": 0,
             "image_count": 0,
             "audio_count": 0,
+            "pending_appeals": 0,
             "top_flagged_users": [],
             "flagged_reasons": [],
             "flag_categories": [],
@@ -335,35 +355,29 @@ class MessageStore:
             "passed_messages": [],
             "flagged_messages": [],
         }
-        if msgs.empty:
+        if not rows:
             return empty
 
-        msgs = msgs.sort_values("timestamp")
-        total = len(msgs)
-        pass_df = msgs[msgs["status"] == "PASS"]
-        flagged_df = msgs[msgs["status"] == "FLAGGED"]
-
-        pass_count = len(pass_df)
-        flagged_count = len(flagged_df)
+        pass_rows = [row for row in rows if row["status"] == "PASS"]
+        flagged_rows = [row for row in rows if row["status"] == "FLAGGED"]
+        total = len(rows)
+        pass_count = len(pass_rows)
+        flagged_count = len(flagged_rows)
         pass_rate = round((pass_count / total) * 100) if total else 0
         flagged_rate = 100 - pass_rate if total else 0
 
-        image_mask = msgs["message"].astype(str).str.startswith("[IMAGE]", na=False)
-        audio_mask = msgs["message"].astype(str).str.startswith("[AUDIO]", na=False)
-        image_count = int(image_mask.sum())
-        audio_count = int(audio_mask.sum())
-        text_count = total - image_count - audio_count
+        types = Counter(MessageStore._message_type(row["message"]) for row in rows)
 
-        top_flagged_users = []
-        if not flagged_df.empty:
-            flagged_user_counts = flagged_df.groupby("username").size().reset_index(name="count")
-            flagged_user_counts = flagged_user_counts.sort_values("count", ascending=False)
-            top_flagged_users = flagged_user_counts.head(10).to_dict("records")
+        flagged_by_user = Counter(row["username"] for row in flagged_rows)
+        top_flagged_users = [
+            {"username": username, "count": count}
+            for username, count in sorted(flagged_by_user.items(), key=lambda item: (-item[1], item[0]))[:10]
+        ]
 
         flagged_reason_counts = Counter()
         flag_category_counts = Counter()
         flagged_messages = []
-        for row in flagged_df.to_dict("records"):
+        for row in flagged_rows:
             reason = str(row.get("reason", "")).strip() or "Unknown"
             category = MessageStore._categorize_reason(reason, row.get("message", ""), row.get("summary", ""))
             flagged_reason_counts[reason] += 1
@@ -379,25 +393,25 @@ class MessageStore:
             for category, count in flag_category_counts.most_common()
         ]
 
+        per_user = defaultdict(lambda: {"PASS": 0, "FLAGGED": 0})
+        for row in rows:
+            per_user[row["username"]][row["status"]] += 1
+
         member_activity = []
         member_heatmap = []
-        for username in msgs["username"].unique():
-            user_msgs = msgs[msgs["username"] == username]
-            user_pass = len(user_msgs[user_msgs["status"] == "PASS"])
-            user_flagged = len(user_msgs[user_msgs["status"] == "FLAGGED"])
-            profile = MessageStore._member_trust_profile(user_pass, user_flagged)
-            item = {
+        for username, counts in per_user.items():
+            profile = MessageStore._member_trust_profile(counts["PASS"], counts["FLAGGED"])
+            member_activity.append({
                 "username": username,
-                "sent": user_pass,
-                "flagged": user_flagged,
-                "total_attempts": user_pass + user_flagged,
+                "sent": counts["PASS"],
+                "flagged": counts["FLAGGED"],
+                "total_attempts": counts["PASS"] + counts["FLAGGED"],
                 **profile,
-            }
-            member_activity.append(item)
+            })
             member_heatmap.append({
                 "username": username,
                 "trust_score": profile["trust_score"],
-                "flagged": user_flagged,
+                "flagged": counts["FLAGGED"],
                 "compliance_rate": profile["compliance_rate"],
                 "risk_level": profile["risk_level"],
             })
@@ -406,19 +420,19 @@ class MessageStore:
         member_heatmap.sort(key=lambda row: (row["trust_score"], -row["flagged"], row["username"]))
 
         trend_buckets = defaultdict(lambda: {"date": "", "passed": 0, "flagged": 0})
-        for row in msgs.to_dict("records"):
+        for row in rows:
             date_key = str(row.get("timestamp", ""))[:10]
             if not date_key:
                 continue
             trend_buckets[date_key]["date"] = date_key
-            if row.get("status") == "PASS":
+            if row["status"] == "PASS":
                 trend_buckets[date_key]["passed"] += 1
             else:
                 trend_buckets[date_key]["flagged"] += 1
         trend_points = [trend_buckets[key] for key in sorted(trend_buckets.keys())][-10:]
 
         passed_messages = []
-        for row in pass_df.tail(20).to_dict("records")[::-1]:
+        for row in pass_rows[-20:][::-1]:
             entry = MessageStore._build_message_entry(row)
             entry["reason"] = "Meets group rules"
             passed_messages.append(entry)
@@ -429,9 +443,12 @@ class MessageStore:
             "flagged_count": flagged_count,
             "pass_rate": pass_rate,
             "flagged_rate": flagged_rate,
-            "text_count": text_count,
-            "image_count": image_count,
-            "audio_count": audio_count,
+            "text_count": types["text"],
+            "image_count": types["image"],
+            "audio_count": types["audio"],
+            "pending_appeals": sum(
+                1 for row in flagged_rows if str(row.get("appeal_status", "")).upper() == "PENDING_ADMIN"
+            ),
             "top_flagged_users": top_flagged_users,
             "flagged_reasons": flagged_reasons,
             "flag_categories": flag_categories,
@@ -439,5 +456,5 @@ class MessageStore:
             "member_heatmap": member_heatmap,
             "trend_points": trend_points,
             "passed_messages": passed_messages,
-            "flagged_messages": flagged_messages,
+            "flagged_messages": flagged_messages[::-1],
         }

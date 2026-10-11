@@ -1,44 +1,66 @@
 """
 ConvoEase — Main Application
 Flask app factory with REST API endpoints.
-All orchestration logic, route definitions, and app configuration lives here.
+
+Who is calling is always taken from the signed session cookie set at login,
+never from usernames sent in request bodies.
 """
 
+import base64
+import binascii
+import io
+import json
+import logging
 import os
 import sys
-import math
-import json
-import base64
-import logging
+import threading
 import time
 import uuid
-from flask import Flask, request, jsonify, send_from_directory, Response, g
-from flask_cors import CORS
+from collections import defaultdict, deque
+from datetime import timedelta
+from functools import wraps
+
+from flask import Flask, Response, g, jsonify, request, send_file, send_from_directory, session
+from sqlalchemy import text as sql_text
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Ensure project root is on the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
+    AI_PROVIDER,
+    AI_PROVIDER_PRESETS,
     APP_VERSION,
-    FRONTEND_DIR,
-    SECRET_KEY,
-    TEXT_MODEL_CONFIG,
-    IMAGE_MODEL_CONFIG,
     AUDIO_MODEL_CONFIG,
+    FRONTEND_DIR,
+    IMAGE_MODEL_CONFIG,
+    MAX_AUDIO_BYTES,
+    MAX_IMAGE_BYTES,
+    MAX_REQUEST_BYTES,
     MEDIA_DIR,
-    MEDIA_IMAGE_DIR,
-    MEDIA_AUDIO_DIR,
-    setup_logging,
+    RATE_LIMITS_ENABLED,
+    SECRET_KEY,
+    SESSION_COOKIE_SECURE,
+    SESSION_DAYS,
+    TEXT_MODEL_CONFIG,
+    TRUST_PROXY,
     log_event,
+    setup_logging,
 )
-from database.Database_processing import DBManager, UserStore, GroupStore, MessageStore
+from database.Database_processing import DBManager, GroupStore, MediaStore, MessageStore, UserStore
+from database.Database_processing.media_store import audio_format, sniff_image
 from core_processing_engine import ProcessingEngine, TextModerationPlugin, ImageModerationPlugin, AudioModerationPlugin
 
 logger = setup_logging("main")
 
+MAX_MESSAGE_CHARS = 4000
+DEFAULT_MESSAGE_PAGE = 200
+MAX_MESSAGE_PAGE = 500
+
 _SILENT_REQUEST_ROUTES = {
     "GET:/api/groups",
     "GET:/api/groups/<group_id>/messages",
+    "GET:/api/auth/me",
 }
 
 
@@ -111,6 +133,9 @@ def _extract_bullets(text, min_items=3, max_items=5):
             line = line[1:].strip()
         elif line[:2].isdigit() and line[2:3] in {".", ")"}:
             line = line[3:].strip()
+        elif line[:1].isdigit() and line[1:2] in {".", ")"}:
+            line = line[2:].strip()
+        line = line.replace("**", "").strip()
         if line:
             bullets.append(line)
     return bullets[:max_items] if bullets else []
@@ -190,7 +215,7 @@ def _run_appeal_review(run_text_task, message_row, group, appeal_text):
             "FLAGGED <reason>\n\n"
             f"Group rules:\n{group.get('rules', '')}\n\n"
             f"Moderation sensitivity: {sensitivity}\n"
-            f"Original message: {message_row.get('message', '')}\n"
+            f"Original message: {MessageStore._display_message(message_row)}\n"
             f"Original flag reason: {original_reason}\n"
             f"Appeal explanation: {appeal_text}\n"
         ),
@@ -206,53 +231,18 @@ def _run_appeal_review(run_text_task, message_row, group, appeal_text):
         "reason": parsed["reason"] or fallback["reason"],
     }
 
-def sanitize_json(obj):
-    """
-    Recursively sanitize an object for safe JSON serialisation.
-    Handles:
-      - float NaN / Infinity  → None
-      - numpy scalar types (int64, float64, bool_, str_) → native Python
-      - dict / list           → recurse
-    This is required on Windows deployments where pandas to_dict() can emit
-    numpy scalars and NaN floats that json.dumps rejects by default.
-    """
-    # Handle numpy scalars if numpy is available
-    try:
-        import numpy as np
-        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
-            return None
-        if isinstance(obj, (np.floating,)):
-            v = float(obj)
-            return None if (math.isnan(v) or math.isinf(v)) else v
-        if isinstance(obj, (np.integer,)):
-            return int(obj)
-        if isinstance(obj, (np.bool_,)):
-            return bool(obj)
-        if isinstance(obj, (np.str_,)):
-            return str(obj)
-        if isinstance(obj, np.ndarray):
-            return [sanitize_json(i) for i in obj.tolist()]
-    except ImportError:
-        # numpy not installed — fall through to plain float check
-        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
-            return None
-
-    if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
-        return None
-    if isinstance(obj, dict):
-        return {k: sanitize_json(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [sanitize_json(v) for v in obj]
-    return obj
-
 
 def safe_json(data, status=200):
-    """Serialise data to a Flask Response, sanitizing NaN / numpy types first."""
+    """Serialise data to a JSON Response."""
     return Response(
-        json.dumps(sanitize_json(data)),
+        json.dumps(data, default=str),
         status=status,
         mimetype="application/json"
     )
+
+
+def _error(message, http_status, **extra):
+    return safe_json({"success": False, "message": message, **extra}, status=http_status)
 
 
 def _service_unavailable_response(kind):
@@ -266,49 +256,93 @@ def _service_unavailable_response(kind):
     )
 
 
-_ALLOWED_AUDIO_EXT = {"mp3", "m4a", "wav", "ogg", "opus", "flac", "webm", "aac"}
-_ALLOWED_IMAGE_EXT = {"png", "jpg", "jpeg", "gif", "webp", "bmp"}
+def _json_body():
+    return request.get_json(silent=True) or {}
 
 
-def _normalize_audio_extension(mime_type):
-    fmt = (mime_type or "").split("/")[-1].split(";")[0].lower().strip() or "wav"
-    aliases = {
-        "mpeg": "mp3",
-        "mp4": "m4a",
-        "x-m4a": "m4a",
-        "x-wav": "wav",
-        "wave": "wav",
-    }
-    fmt = aliases.get(fmt, fmt)
-    return fmt if fmt in _ALLOWED_AUDIO_EXT else "wav"
+def _decode_base64(payload):
+    """Decode a base64 string (optionally a data: URL). Returns bytes or None."""
+    payload = (payload or "").strip()
+    if payload.startswith("data:") and "," in payload:
+        payload = payload.split(",", 1)[1]
+    try:
+        return base64.b64decode(payload, validate=True)
+    except (binascii.Error, ValueError):
+        return None
 
 
-def _sanitize_media_ext(mime_type, default="png"):
-    """
-    Derive a safe filesystem extension from an image mime_type.
-    Whitelist-validated so a malicious client cannot smuggle path/XSS
-    characters into media_url.
-    """
-    raw = (mime_type or "").split("/")[-1].split(";")[0].split("+")[0].lower().strip()
-    if raw == "jpeg":
-        raw = "jpg"
-    return raw if raw in _ALLOWED_IMAGE_EXT else default
+def _public_message(row):
+    """Message fields sent to clients (the per-message rules snapshot stays server-side)."""
+    item = dict(row)
+    item.pop("group_rules", None)
+    return item
 
-def create_app():
+
+class RateLimiter:
+    """Sliding-window limiter kept in memory (per worker process)."""
+
+    def __init__(self):
+        self._hits = defaultdict(deque)
+        self._lock = threading.Lock()
+
+    def allow(self, key, limit, window_seconds):
+        now = time.monotonic()
+        with self._lock:
+            hits = self._hits[key]
+            while hits and now - hits[0] > window_seconds:
+                hits.popleft()
+            if len(hits) >= limit:
+                return False
+            hits.append(now)
+            return True
+
+
+# (max requests, window in seconds) per bucket
+RATE_LIMITS = {
+    "auth": (10, 60),      # per IP: login / register attempts
+    "message": (30, 60),   # per user: text messages
+    "media": (10, 60),     # per user: image / audio uploads
+    "ai": (12, 60),        # per user: catch-up, rule suggestions, appeals
+}
+
+
+def create_app(test_config=None):
     """Application factory — creates and configures the Flask app."""
     app = Flask(
         __name__,
-        static_folder=FRONTEND_DIR,
-        static_url_path=""
+        static_folder=None,
     )
-    app.secret_key = SECRET_KEY
-    CORS(app)
+    app.config.update(
+        SECRET_KEY=SECRET_KEY,
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=SESSION_COOKIE_SECURE,
+        SESSION_COOKIE_NAME="convoease_session",
+        PERMANENT_SESSION_LIFETIME=timedelta(days=SESSION_DAYS),
+        MAX_CONTENT_LENGTH=MAX_REQUEST_BYTES,
+        RATE_LIMITS_ENABLED=RATE_LIMITS_ENABLED,
+        DATABASE_URL=None,
+    )
+    if test_config:
+        app.config.update(test_config)
+    if TRUST_PROXY:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
+
+    limiter = RateLimiter()
+
+    def rate_limited(bucket, key):
+        if not app.config.get("RATE_LIMITS_ENABLED", True):
+            return None
+        limit, window = RATE_LIMITS[bucket]
+        if limiter.allow(f"{bucket}:{key}", limit, window):
+            return None
+        return _error("Too many requests. Please slow down and try again in a minute.", 429, status="RATE_LIMITED")
 
     @app.before_request
     def attach_request_metadata():
         g.request_id = str(uuid.uuid4())[:8]
         g.request_started_at = time.perf_counter()
-        g.request_user = request.args.get("username", "-")
+        g.request_user = session.get("username", "-")
         g.request_group_id = request.view_args.get("group_id", "-") if request.view_args else "-"
         g.skip_request_log = _should_skip_request_log()
         if request.path.startswith("/api/") and not g.skip_request_log:
@@ -321,11 +355,16 @@ def create_app():
                 request_id=g.request_id,
                 user=g.request_user,
                 group_id=g.request_group_id,
-                details={"remote_addr": request.remote_addr or "-", "query": request.args.to_dict(flat=True)},
+                details={"remote_addr": request.remote_addr or "-"},
             )
 
     @app.after_request
-    def log_response(response):
+    def finalize_response(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        if request.path.startswith("/api/"):
+            response.headers.setdefault("Cache-Control", "no-store")
         if request.path.startswith("/api/") and (
             not getattr(g, "skip_request_log", False) or response.status_code >= 400
         ):
@@ -345,9 +384,14 @@ def create_app():
             )
         return response
 
+    @app.errorhandler(413)
+    def too_large(_exc):
+        limit_mb = max(MAX_IMAGE_BYTES, MAX_AUDIO_BYTES) // (1024 * 1024)
+        return _error(f"Upload is too large (max {limit_mb} MB).", 413)
+
     # ── Initialize Database ──────────────────────────────────────────────
-    DBManager.initialize()
-    log_event(logger, logging.INFO, "database_initialized", "CSV database initialized", category="system")
+    DBManager.initialize(app.config.get("DATABASE_URL"))
+    log_event(logger, logging.INFO, "database_initialized", "Database initialized", category="system")
 
     # ── Initialize Processing Engine ─────────────────────────────────────
     engine = ProcessingEngine()
@@ -425,28 +469,115 @@ def create_app():
         if not text_plugin:
             return fallback_text
         try:
-            return text_plugin.generate_text(system_prompt, user_prompt, max_new_tokens=280, temperature=0.2)
+            # Generous token budget: some models "think" before answering.
+            return text_plugin.generate_text(system_prompt, user_prompt, max_new_tokens=1024, temperature=0.2)
         except Exception as exc:
             logger.error("Text task failed: %s", exc)
             return fallback_text
+
+    # ── Auth helpers ─────────────────────────────────────────────────────
+
+    def current_user():
+        return session.get("username")
+
+    def login_required(view):
+        @wraps(view)
+        def wrapper(*args, **kwargs):
+            username = current_user()
+            if not username:
+                return _error("Please sign in to continue.", 401, status="UNAUTHENTICATED")
+            g.request_user = username
+            return view(*args, **kwargs)
+        return wrapper
+
+    def load_group(group_id, admin_only=False):
+        """Return (group, None) when the caller may access it, else (None, error_response)."""
+        _bind_request_context(group_id=group_id)
+        group = GroupStore.get_group_details(group_id)
+        if not group:
+            return None, _error("Group not found.", 404)
+        username = current_user()
+        if not GroupStore.is_member(group_id, username):
+            return None, _error("You are not a member of this group.", 403)
+        if admin_only and group.get("admin_username") != username:
+            return None, _error("Only the group admin can do this.", 403)
+        return group, None
+
+    def start_session(username):
+        session.clear()
+        session["username"] = username
+        session.permanent = True
+
+    def recent_context(group_id):
+        recent = MessageStore.get_recent_messages(group_id, limit=6)
+        return [f"{m['username']}: {MessageStore._display_message(m)}" for m in recent]
 
     # ── Static / Frontend Routes ─────────────────────────────────────────
 
     @app.route("/")
     def serve_index():
-        return send_from_directory(FRONTEND_DIR, "index.html")
+        response = send_from_directory(FRONTEND_DIR, "index.html")
+        response.headers["Cache-Control"] = "no-cache"
+        return response
 
-    @app.route("/media/<path:filepath>")
-    def serve_media(filepath):
-        """Serve uploaded media files (images, audio, video) from the media directory.
-        IMPORTANT: This must be registered BEFORE the catch-all /<path:path> route.
-        """
-        return send_from_directory(MEDIA_DIR, filepath)
+    @app.route("/media/<kind>/<media_id>")
+    @login_required
+    def serve_media(kind, media_id):
+        """Serve an uploaded image or audio file to members of its group."""
+        if kind not in {"image", "audio"}:
+            return _error("Not found.", 404)
+
+        row = MediaStore.get(kind, media_id)
+        if row:
+            group_id = row["group_id"]
+        else:
+            # Legacy (pre-v5) file on disk: find its group through the message.
+            owner = MessageStore.find_by_media_url(f"/media/{kind}/{media_id}")
+            group_id = owner["group_id"] if owner else None
+
+        if not group_id or not GroupStore.is_member(group_id, current_user()):
+            return _error("Not found.", 404)
+
+        if row:
+            response = send_file(
+                io.BytesIO(row["data"]),
+                mimetype=row["mime_type"],
+                conditional=True,
+                etag=media_id,
+                max_age=31536000,
+            )
+        else:
+            response = send_from_directory(MEDIA_DIR, f"{kind}/{media_id}", max_age=31536000)
+        response.headers["Cache-Control"] = "private, max-age=31536000, immutable"
+        return response
 
     @app.route("/<path:path>")
     def serve_static(path):
-        return send_from_directory(FRONTEND_DIR, path)
+        if path.startswith("api/"):
+            return _error("Not found.", 404)
+        return send_from_directory(FRONTEND_DIR, path, max_age=3600)
 
+    # ══════════════════════════════════════════════════════════════════════
+    # HEALTH
+    # ══════════════════════════════════════════════════════════════════════
+
+    @app.route("/healthz")
+    def healthz():
+        """Liveness/readiness probe for hosting platforms."""
+        try:
+            with DBManager.engine().connect() as conn:
+                conn.execute(sql_text("SELECT 1"))
+            database = "ok"
+        except Exception as exc:
+            logger.error("Health check database failure: %s", exc)
+            database = "error"
+        status = 200 if database == "ok" else 503
+        return safe_json({
+            "status": "ok" if status == 200 else "degraded",
+            "version": APP_VERSION,
+            "database": database,
+            "ai": {name: info["status"] for name, info in plugin_health.items()},
+        }, status=status)
 
     # ══════════════════════════════════════════════════════════════════════
     # AUTH API
@@ -454,16 +585,19 @@ def create_app():
 
     @app.route("/api/auth/register", methods=["POST"])
     def api_register():
-        data = request.get_json()
-        username = data.get("username", "").strip()
-        password = data.get("password", "").strip()
-        full_name = data.get("full_name", "").strip()
-        bio = data.get("bio", "").strip()
+        limited = rate_limited("auth", request.remote_addr)
+        if limited:
+            return limited
+        data = _json_body()
+        username = str(data.get("username", "")).strip()
+        password = str(data.get("password", ""))
+        full_name = str(data.get("full_name", "")).strip()
+        bio = str(data.get("bio", "")).strip()
 
-        if not all([username, password, full_name]):
-            return jsonify({"success": False, "message": "All fields required."}), 400
-        if username.lower() == password.lower():
-            return jsonify({"success": False, "message": "Username and password cannot be the same."}), 400
+        if not all([username, password.strip(), full_name]):
+            return _error("All fields required.", 400)
+        if username.lower() == password.strip().lower():
+            return _error("Username and password cannot be the same.", 400)
 
         success, message = UserStore.register(username, password, full_name, bio)
         _bind_request_context(user=username)
@@ -475,19 +609,26 @@ def create_app():
             category="auth",
             **_request_context(),
             status_code=200 if success else 409,
-            details={"full_name": full_name, "success": success},
+            details={"success": success},
         )
-        status = 200 if success else 409
-        return jsonify({"success": success, "message": message}), status
+        if not success:
+            status = 409 if "exists" in message else 400
+            return _error(message, status)
+
+        start_session(username)
+        return safe_json({"success": True, "message": message, "user": UserStore.get_profile(username)})
 
     @app.route("/api/auth/login", methods=["POST"])
     def api_login():
-        data = request.get_json()
-        username = data.get("username", "").strip()
-        password = data.get("password", "").strip()
+        limited = rate_limited("auth", request.remote_addr)
+        if limited:
+            return limited
+        data = _json_body()
+        username = str(data.get("username", "")).strip()
+        password = str(data.get("password", ""))
 
         if not all([username, password]):
-            return jsonify({"success": False, "message": "Username and password required."}), 400
+            return _error("Username and password required.", 400)
 
         success, user_data = UserStore.validate_login(username, password)
         _bind_request_context(user=username)
@@ -502,34 +643,46 @@ def create_app():
             details={"success": success},
         )
         if success:
-            user_data.pop("password", None)
+            start_session(username)
             return safe_json({"success": True, "user": user_data})
-        return jsonify({"success": False, "message": "Invalid credentials."}), 401
+        return _error("Invalid username or password.", 401)
+
+    @app.route("/api/auth/logout", methods=["POST"])
+    def api_logout():
+        session.clear()
+        return safe_json({"success": True})
+
+    @app.route("/api/auth/me", methods=["GET"])
+    @login_required
+    def api_me():
+        profile = UserStore.get_profile(current_user())
+        if not profile:
+            session.clear()
+            return _error("Please sign in to continue.", 401, status="UNAUTHENTICATED")
+        return safe_json({"success": True, "user": profile})
 
     # ══════════════════════════════════════════════════════════════════════
     # GROUPS API
     # ══════════════════════════════════════════════════════════════════════
 
     @app.route("/api/groups", methods=["GET"])
+    @login_required
     def api_get_groups():
-        username = request.args.get("username", "")
-        if not username:
-            return jsonify({"success": False, "message": "Username required."}), 400
-        _bind_request_context(user=username)
-        groups = GroupStore.get_user_groups(username)
+        groups = GroupStore.get_user_groups(current_user())
         return safe_json({"success": True, "groups": groups})
 
     @app.route("/api/groups", methods=["POST"])
+    @login_required
     def api_create_group():
-        data = request.get_json()
-        name = data.get("group_name", "").strip()
-        password = data.get("password", "").strip()
-        admin = data.get("admin_username", "").strip()
-        rules = data.get("rules", "Be respectful.").strip()
+        data = _json_body()
+        name = str(data.get("group_name", "")).strip()
+        password = str(data.get("password", "")).strip()
+        admin = current_user()
+        rules = str(data.get("rules", "Be respectful.")).strip()
         moderation_sensitivity = _normalize_sensitivity(data.get("moderation_sensitivity", "Moderate"))
 
-        if not all([name, admin]):
-            return jsonify({"success": False, "message": "Group name and admin required."}), 400
+        if not name:
+            return _error("Group name required.", 400)
 
         success, group_id = GroupStore.create_group(name, password, admin, rules, moderation_sensitivity)
         _bind_request_context(user=admin, group_id=group_id)
@@ -542,17 +695,21 @@ def create_app():
             **_request_context(),
             details={"group_name": name, "moderation_sensitivity": moderation_sensitivity},
         )
-        return jsonify({"success": success, "group_id": group_id}), 200
+        return safe_json({"success": success, "group_id": group_id})
 
     @app.route("/api/groups/join", methods=["POST"])
+    @login_required
     def api_join_group():
-        data = request.get_json()
-        group_id = data.get("group_id", "").strip()
-        password = data.get("password", "").strip()
-        username = data.get("username", "").strip()
+        limited = rate_limited("auth", f"join:{current_user()}")
+        if limited:
+            return limited
+        data = _json_body()
+        group_id = str(data.get("group_id", "")).strip().upper()
+        password = str(data.get("password", "")).strip()
+        username = current_user()
 
-        if not all([group_id, username]):
-            return jsonify({"success": False, "message": "Group ID and username required."}), 400
+        if not group_id:
+            return _error("Group ID required.", 400)
 
         _bind_request_context(user=username, group_id=group_id)
         success, message = GroupStore.join_group(group_id, password, username)
@@ -567,30 +724,31 @@ def create_app():
             details={"success": success},
         )
         status = 200 if success else 400
-        return jsonify({"success": success, "message": message}), status
+        return safe_json({"success": success, "message": message, "group_id": group_id}, status=status)
 
     @app.route("/api/groups/<group_id>", methods=["GET"])
+    @login_required
     def api_group_details(group_id):
-        _bind_request_context(group_id=group_id)
-        details = GroupStore.get_group_details(group_id)
-        if details:
-            details.pop("password", None)
-            return safe_json({"success": True, "group": details})
-        return safe_json({"success": False, "message": "Group not found."}, status=404)
+        group, error = load_group(group_id)
+        if error:
+            return error
+        details = dict(group)
+        details["has_password"] = bool(details.pop("password", ""))
+        details["is_admin"] = details.get("admin_username") == current_user()
+        details["member_count"] = len(GroupStore.get_group_members(group_id))
+        return safe_json({"success": True, "group": details})
 
     @app.route("/api/groups/<group_id>/rules", methods=["PUT"])
+    @login_required
     def api_update_rules(group_id):
-        data = request.get_json()
-        new_rules = data.get("rules", "")
-        requesting_user = data.get("username", "")
-        moderation_sensitivity = _normalize_sensitivity(data.get("moderation_sensitivity", "Moderate"))
-        _bind_request_context(user=requesting_user, group_id=group_id)
-
-        details = GroupStore.get_group_details(group_id)
-        if not details:
-            return jsonify({"success": False, "message": "Group not found."}), 404
-        if details.get("admin_username") != requesting_user:
-            return jsonify({"success": False, "message": "Only admin can update rules."}), 403
+        group, error = load_group(group_id, admin_only=True)
+        if error:
+            return error
+        data = _json_body()
+        new_rules = str(data.get("rules", "")).strip()
+        moderation_sensitivity = _normalize_sensitivity(
+            data.get("moderation_sensitivity", group.get("moderation_sensitivity", "Moderate"))
+        )
 
         GroupStore.update_group_rules(group_id, new_rules, moderation_sensitivity)
         log_event(
@@ -605,19 +763,19 @@ def create_app():
                 "rules_preview": _payload_preview(new_rules),
             },
         )
-        return jsonify({"success": True, "message": "Rules updated."}), 200
+        return safe_json({"success": True, "message": "Rules updated."})
 
     @app.route("/api/groups/<group_id>/name", methods=["PUT"])
+    @login_required
     def api_update_group_name(group_id):
-        data = request.get_json() or {}
-        new_name = data.get("group_name", "").strip()
-        username = data.get("username", "").strip()
+        _group, error = load_group(group_id, admin_only=True)
+        if error:
+            return error
+        new_name = str(_json_body().get("group_name", "")).strip()
+        if not new_name:
+            return _error("Group name required.", 400)
 
-        if not all([new_name, username]):
-            return jsonify({"success": False, "message": "Group name and username required."}), 400
-
-        _bind_request_context(user=username, group_id=group_id)
-        success, message = GroupStore.update_group_name(group_id, new_name, username)
+        success, message = GroupStore.update_group_name(group_id, new_name, current_user())
         if success:
             log_event(
                 logger, logging.INFO, "group_renamed",
@@ -625,23 +783,26 @@ def create_app():
                 **_request_context(),
                 details={"new_name": new_name},
             )
-        status = 200 if success else 403
-        return jsonify({"success": success, "message": message}), status
+        return safe_json({"success": success, "message": message}, status=200 if success else 403)
 
     @app.route("/api/groups/<group_id>/members", methods=["GET"])
+    @login_required
     def api_group_members(group_id):
-        _bind_request_context(group_id=group_id)
+        group, error = load_group(group_id)
+        if error:
+            return error
         members = GroupStore.get_group_members(group_id)
-        return safe_json({"success": True, "members": members})
+        profiles = UserStore.get_profiles(members)
+        member_profiles = []
+        for username in members:
+            profile = profiles.get(username) or {"username": username, "full_name": username}
+            member_profiles.append({**profile, "is_admin": username == group.get("admin_username")})
+        return safe_json({"success": True, "members": members, "profiles": member_profiles})
 
     @app.route("/api/groups/<group_id>/leave", methods=["POST"])
+    @login_required
     def api_leave_group(group_id):
-        data = request.get_json() or {}
-        username = data.get("username", "").strip()
-
-        if not username:
-            return jsonify({"success": False, "message": "Username required."}), 400
-
+        username = current_user()
         _bind_request_context(user=username, group_id=group_id)
         success, message = GroupStore.leave_group(group_id, username)
         log_event(
@@ -654,19 +815,15 @@ def create_app():
             status_code=200 if success else 400,
             details={"success": success},
         )
-        status = 200 if success else 400
-        return jsonify({"success": success, "message": message}), status
+        return safe_json({"success": success, "message": message}, status=200 if success else 400)
 
     @app.route("/api/groups/<group_id>", methods=["DELETE"])
+    @login_required
     def api_delete_group(group_id):
-        data = request.get_json() or {}
-        username = data.get("username", "").strip()
-
-        if not username:
-            return jsonify({"success": False, "message": "Username required."}), 400
-
-        _bind_request_context(user=username, group_id=group_id)
-        success, message = GroupStore.delete_group(group_id, username)
+        _group, error = load_group(group_id, admin_only=True)
+        if error:
+            return error
+        success, message = GroupStore.delete_group(group_id, current_user())
         log_event(
             logger,
             logging.INFO if success else logging.WARNING,
@@ -677,62 +834,84 @@ def create_app():
             status_code=200 if success else 403,
             details={"success": success},
         )
-        status = 200 if success else 403
-        return jsonify({"success": success, "message": message}), status
+        return safe_json({"success": success, "message": message}, status=200 if success else 403)
 
     # ══════════════════════════════════════════════════════════════════════
     # MESSAGES API
     # ══════════════════════════════════════════════════════════════════════
 
     @app.route("/api/groups/<group_id>/messages", methods=["GET"])
+    @login_required
     def api_get_messages(group_id):
-        _bind_request_context(group_id=group_id)
-        messages = MessageStore.get_visible_messages(group_id)
-        return safe_json({"success": True, "messages": messages})
+        """Visible messages, oldest first.
+
+        Query params:
+            after               only messages with seq greater than this
+            limit               newest N messages (default 200, max 500)
+            include_own_flagged 1 to include the caller's held messages
+        """
+        _group, error = load_group(group_id)
+        if error:
+            return error
+        try:
+            after = max(0, int(request.args.get("after", "0")))
+        except ValueError:
+            after = 0
+        try:
+            limit = max(1, min(int(request.args.get("limit", DEFAULT_MESSAGE_PAGE)), MAX_MESSAGE_PAGE))
+        except ValueError:
+            limit = DEFAULT_MESSAGE_PAGE
+        username = current_user()
+        own_flagged = username if request.args.get("include_own_flagged") in {"1", "true"} else None
+
+        rows = MessageStore.get_visible_messages(group_id, after_seq=after, limit=limit, own_flagged_for=own_flagged)
+        if rows:
+            GroupStore.mark_read(group_id, username, max(row["seq"] for row in rows))
+        return safe_json({"success": True, "messages": [_public_message(row) for row in rows]})
 
     @app.route("/api/groups/<group_id>/messages/flagged", methods=["GET"])
+    @login_required
     def api_get_flagged(group_id):
-        _bind_request_context(group_id=group_id)
+        _group, error = load_group(group_id, admin_only=True)
+        if error:
+            return error
         flagged = MessageStore.get_flagged_messages(group_id)
-        return safe_json({"success": True, "flagged": flagged})
+        return safe_json({"success": True, "flagged": [_public_message(row) for row in flagged]})
 
     @app.route("/api/groups/<group_id>/messages/<message_id>", methods=["DELETE"])
+    @login_required
     def api_delete_message(group_id, message_id):
-        data = request.get_json() or {}
-        username = data.get("username", "").strip()
-
-        if not username:
-            return jsonify({"success": False, "message": "Username required."}), 400
-
-        _bind_request_context(user=username, group_id=group_id)
-        success, message = MessageStore.soft_delete_message(group_id, message_id, username)
+        _group, error = load_group(group_id)
+        if error:
+            return error
+        success, message = MessageStore.soft_delete_message(group_id, message_id, current_user())
         if success:
             log_event(
                 logger, logging.INFO, "message_deleted",
                 "Message soft-deleted by sender", category="moderation",
                 **_request_context(), message_id=message_id,
             )
-        status = 200 if success else 403
-        return jsonify({"success": success, "message": message}), status
+        return safe_json({"success": success, "message": message}, status=200 if success else 403)
 
     @app.route("/api/groups/<group_id>/messages", methods=["POST"])
+    @login_required
     def api_send_message(group_id):
-        data = request.get_json()
-        username = data.get("username", "").strip()
-        message = data.get("message", "").strip()
+        group, error = load_group(group_id)
+        if error:
+            return error
+        username = current_user()
+        limited = rate_limited("message", username)
+        if limited:
+            return limited
+        message = str(_json_body().get("message", "")).strip()
 
-        if not all([username, message]):
-            return jsonify({"success": False, "message": "Username and message required."}), 400
-
-        _bind_request_context(user=username, group_id=group_id)
-        group = GroupStore.get_group_details(group_id)
-        if not group:
-            return jsonify({"success": False, "message": "Group not found."}), 404
+        if not message:
+            return _error("Message required.", 400)
+        if len(message) > MAX_MESSAGE_CHARS:
+            return _error(f"Message is too long (max {MAX_MESSAGE_CHARS} characters).", 400)
 
         rules = group.get("rules", "")
         moderation_sensitivity = group.get("moderation_sensitivity", "Moderate")
-        recent = MessageStore.get_visible_messages(group_id)
-        recent_context = [f"{m['username']}: {m['message']}" for m in recent[-6:]]
         text_plugin = engine.get_plugin("text_moderation")
         text_backend = _plugin_backend_name(text_plugin)
 
@@ -750,11 +929,7 @@ def create_app():
                     "message_preview": _payload_preview(message),
                 },
             )
-            return jsonify({
-                "success": False,
-                "status": "UNAVAILABLE",
-                "message": _service_unavailable_message("Text"),
-            }), 503
+            return _service_unavailable_response("Text")
 
         moderation_result = {"allowed": True, "reason": ""}
         if text_plugin and rules:
@@ -762,7 +937,7 @@ def create_app():
                 moderation_result = engine.process("text_moderation", {
                     "message": message,
                     "rules": rules,
-                    "recent_messages": recent_context,
+                    "recent_messages": recent_context(group_id),
                     "moderation_sensitivity": moderation_sensitivity,
                 })
             except Exception as e:
@@ -816,65 +991,66 @@ def create_app():
                     "message_preview": _payload_preview(message),
                 },
             )
-            return jsonify({"success": True, "status": "PASS", "message_id": msg_id}), 200
-        else:
-            msg_id = MessageStore.save_message(
-                group_id,
-                username,
-                message,
-                "FLAGGED",
-                moderation_result["reason"],
-                group_rules=rules,
-                initial_status="FLAGGED",
-                initial_reason=moderation_result["reason"],
-            )
-            log_event(
-                logger,
-                logging.WARNING,
-                "text_message_flagged",
-                "Text message flagged",
-                category="moderation",
-                **_request_context(),
-                message_id=msg_id,
-                details={
-                    "backend": text_backend,
-                    "message_preview": _payload_preview(message),
-                    "reason": moderation_result["reason"],
-                },
-            )
-            return jsonify({
-                "success": False,
-                "status": "FLAGGED",
+            return safe_json({"success": True, "status": "PASS", "message_id": msg_id})
+
+        msg_id = MessageStore.save_message(
+            group_id,
+            username,
+            message,
+            "FLAGGED",
+            moderation_result["reason"],
+            group_rules=rules,
+            initial_status="FLAGGED",
+            initial_reason=moderation_result["reason"],
+        )
+        log_event(
+            logger,
+            logging.WARNING,
+            "text_message_flagged",
+            "Text message flagged",
+            category="moderation",
+            **_request_context(),
+            message_id=msg_id,
+            details={
+                "backend": text_backend,
+                "message_preview": _payload_preview(message),
                 "reason": moderation_result["reason"],
-                "message_id": msg_id,
-            }), 200
+            },
+        )
+        return safe_json({
+            "success": False,
+            "status": "FLAGGED",
+            "reason": moderation_result["reason"],
+            "message_id": msg_id,
+        })
 
     @app.route("/api/groups/<group_id>/messages/<message_id>/appeal", methods=["POST"])
+    @login_required
     def api_submit_appeal(group_id, message_id):
-        data = request.get_json() or {}
-        username = data.get("username", "").strip()
-        appeal_text = data.get("appeal_text", "").strip()
-        _bind_request_context(user=username, group_id=group_id)
+        group, error = load_group(group_id)
+        if error:
+            return error
+        username = current_user()
+        appeal_text = str(_json_body().get("appeal_text", "")).strip()
 
-        if not all([username, appeal_text]):
-            return jsonify({"success": False, "message": "Username and appeal_text required."}), 400
-
-        group = GroupStore.get_group_details(group_id)
-        if not group:
-            return jsonify({"success": False, "message": "Group not found."}), 404
+        if not appeal_text:
+            return _error("Please explain why the message should be allowed.", 400)
 
         message_row = MessageStore.get_message(group_id, message_id)
         if not message_row:
-            return jsonify({"success": False, "message": "Message not found."}), 404
+            return _error("Message not found.", 404)
         if message_row.get("username") != username:
-            return jsonify({"success": False, "message": "You can only appeal your own message."}), 403
+            return _error("You can only appeal your own message.", 403)
         if message_row.get("status") != "FLAGGED":
-            return jsonify({"success": False, "message": "Only flagged messages can be appealed."}), 400
+            return _error("Only flagged messages can be appealed.", 400)
         if str(message_row.get("appeal_status", "")).upper() == "PENDING_ADMIN":
-            return jsonify({"success": False, "message": "An appeal is already pending."}), 400
+            return _error("An appeal is already pending.", 400)
+        limited = rate_limited("ai", username)
+        if limited:
+            return limited
 
-        appeal_result = _run_appeal_review(run_text_task, message_row, group, appeal_text)
-        MessageStore.submit_appeal(group_id, message_id, appeal_text, appeal_result)
+        appeal_result = _run_appeal_review(run_text_task, message_row, group, appeal_text[:2000])
+        MessageStore.submit_appeal(group_id, message_id, appeal_text[:2000], appeal_result)
         log_event(
             logger,
             logging.INFO,
@@ -888,38 +1064,34 @@ def create_app():
                 "appeal_ai_reason": appeal_result["reason"],
             },
         )
-        return jsonify({
+        return safe_json({
             "success": True,
             "appeal_status": "PENDING_ADMIN",
             "ai_status": appeal_result["status"],
             "ai_reason": appeal_result["reason"],
-        }), 200
+        })
 
     @app.route("/api/groups/<group_id>/messages/<message_id>/appeal/review", methods=["POST"])
+    @login_required
     def api_review_appeal(group_id, message_id):
-        data = request.get_json() or {}
-        username = data.get("username", "").strip()
+        _group, error = load_group(group_id, admin_only=True)
+        if error:
+            return error
+        data = _json_body()
         decision = str(data.get("decision", "")).strip().lower()
-        admin_note = data.get("admin_note", "").strip()
-        _bind_request_context(user=username, group_id=group_id)
+        admin_note = str(data.get("admin_note", "")).strip()[:1000]
 
         if decision not in {"approve", "reject"}:
-            return jsonify({"success": False, "message": "Decision must be approve or reject."}), 400
-
-        group = GroupStore.get_group_details(group_id)
-        if not group:
-            return jsonify({"success": False, "message": "Group not found."}), 404
-        if group.get("admin_username") != username:
-            return jsonify({"success": False, "message": "Only admin can review appeals."}), 403
+            return _error("Decision must be approve or reject.", 400)
 
         message_row = MessageStore.get_message(group_id, message_id)
         if not message_row:
-            return jsonify({"success": False, "message": "Message not found."}), 404
+            return _error("Message not found.", 404)
         if str(message_row.get("appeal_status", "")).upper() != "PENDING_ADMIN":
-            return jsonify({"success": False, "message": "No pending appeal for this message."}), 400
+            return _error("No pending appeal for this message.", 400)
 
         approved = decision == "approve"
-        MessageStore.resolve_appeal(group_id, message_id, approved, username, admin_note)
+        MessageStore.resolve_appeal(group_id, message_id, approved, current_user(), admin_note)
         log_event(
             logger,
             logging.INFO,
@@ -930,42 +1102,46 @@ def create_app():
             message_id=message_id,
             details={"decision": decision, "admin_note": _payload_preview(admin_note)},
         )
-        return jsonify({
+        return safe_json({
             "success": True,
             "appeal_status": "APPROVED" if approved else "REJECTED",
             "final_status": "PASS" if approved else "FLAGGED",
-        }), 200
+        })
 
     # ══════════════════════════════════════════════════════════════════════
     # IMAGE MESSAGES API
     # ══════════════════════════════════════════════════════════════════════
 
     @app.route("/api/groups/<group_id>/images", methods=["POST"])
+    @login_required
     def api_send_image(group_id):
         """
-        Accept a base64-encoded image, summarize it via Gemma-3 vision,
-        then moderate the summary against group rules.
+        Accept a base64-encoded image, describe it with the vision model,
+        then moderate the description against group rules.
 
         Request body (JSON):
-            username   (str)  — sender
             image_data (str)  — base64-encoded image bytes
-            mime_type  (str)  — e.g. "image/png", "image/jpeg" (default: image/png)
+            mime_type  (str)  — optional; the real type is detected from the bytes
 
         Response:
-            success, status ("PASS"/"FLAGGED"), reason, summary
+            success, status ("PASS"/"FLAGGED"), reason, summary, media_url
         """
-        data = request.get_json()
-        username   = data.get("username", "").strip()
-        image_data = data.get("image_data", "").strip()
-        mime_type  = data.get("mime_type", "image/png").strip()
+        group, error = load_group(group_id)
+        if error:
+            return error
+        username = current_user()
+        limited = rate_limited("media", username)
+        if limited:
+            return limited
 
-        if not all([username, image_data]):
-            return jsonify({"success": False, "message": "Username and image_data required."}), 400
-
-        _bind_request_context(user=username, group_id=group_id)
-        group = GroupStore.get_group_details(group_id)
-        if not group:
-            return jsonify({"success": False, "message": "Group not found."}), 404
+        raw_bytes = _decode_base64(_json_body().get("image_data", ""))
+        if not raw_bytes:
+            return _error("Image data required.", 400)
+        if len(raw_bytes) > MAX_IMAGE_BYTES:
+            return _error(f"Image is too large (max {MAX_IMAGE_BYTES // (1024 * 1024)} MB).", 413)
+        mime_type, ext = sniff_image(raw_bytes)
+        if not mime_type:
+            return _error("Unsupported image. Use PNG, JPEG, GIF, WebP or BMP.", 400)
 
         image_plugin = engine.get_plugin("image_moderation")
         image_backend = _plugin_backend_name(image_plugin)
@@ -973,17 +1149,13 @@ def create_app():
             return _service_unavailable_response("Image")
 
         rules = group.get("rules", "")
-        moderation_sensitivity = group.get("moderation_sensitivity", "Moderate")
-        recent = MessageStore.get_visible_messages(group_id)
-        recent_context = [f"{m['username']}: {m['message']}" for m in recent[-6:]]
-
         try:
             result = engine.process("image_moderation", {
-                "image_data": image_data,
-                "mime_type":  mime_type,
-                "rules":      rules,
-                "recent_messages": recent_context,
-                "moderation_sensitivity": moderation_sensitivity,
+                "image_data": base64.b64encode(raw_bytes).decode("ascii"),
+                "mime_type": mime_type,
+                "rules": rules,
+                "recent_messages": recent_context(group_id),
+                "moderation_sensitivity": group.get("moderation_sensitivity", "Moderate"),
             })
         except Exception as e:
             log_event(
@@ -1009,118 +1181,71 @@ def create_app():
             )
             return _service_unavailable_response("Image")
 
-        # Decode base64 and save image to disk so it persists across restarts
-        # and is visible to all users via /media/image/{filename}.
-        ext = _sanitize_media_ext(mime_type, default="png")
-        filename = f"{uuid.uuid4()}.{ext}"
-        filepath = os.path.join(MEDIA_IMAGE_DIR, filename)
-
-        try:
-            raw_bytes = base64.b64decode(image_data)
-            with open(filepath, "wb") as f:
-                f.write(raw_bytes)
-            log_event(
-                logger,
-                logging.INFO,
-                "image_saved",
-                "Image written to media storage",
-                category="media",
-                **_request_context(),
-                details={"file": filename, "bytes": len(raw_bytes), "mime_type": mime_type},
-            )
-        except Exception as e:
-            log_event(
-                logger,
-                logging.ERROR,
-                "image_save_failed",
-                "Failed to persist image",
-                category="media",
-                **_request_context(),
-                details={"error": str(e), "file": filename},
-            )
-            return jsonify({"success": False, "message": "Failed to save image."}), 500
-
-        # URL the frontend uses: stored in CSV so it works for all users + after page reload
-        media_url    = f"/media/image/{filename}"
-        message_text = "[IMAGE]"
-        summary_text = result["summary"] if result["summary"] else ""
-
+        media_url = MediaStore.save("image", group_id, username, raw_bytes, mime_type, ext)
+        summary_text = result.get("summary") or ""
+        status = "PASS" if result["allowed"] else "FLAGGED"
+        reason = "" if result["allowed"] else result["reason"]
+        msg_id = MessageStore.save_message(
+            group_id, username, "[IMAGE]", status,
+            reason=reason, summary=summary_text, media_url=media_url, group_rules=rules,
+        )
+        log_event(
+            logger,
+            logging.INFO if result["allowed"] else logging.WARNING,
+            "image_message_passed" if result["allowed"] else "image_message_flagged",
+            "Image message accepted" if result["allowed"] else "Image message flagged",
+            category="moderation",
+            **_request_context(),
+            message_id=msg_id,
+            details={"backend": image_backend, "reason": reason, "summary_preview": _payload_preview(summary_text)},
+        )
+        payload = {
+            "success": bool(result["allowed"]),
+            "status": status,
+            "message_id": msg_id,
+            "summary": summary_text,
+        }
         if result["allowed"]:
-            msg_id = MessageStore.save_message(
-                group_id, username, message_text, "PASS",
-                reason="", summary=summary_text, media_url=media_url, group_rules=rules
-            )
-            log_event(
-                logger,
-                logging.INFO,
-                "image_message_passed",
-                "Image message accepted",
-                category="moderation",
-                **_request_context(),
-                message_id=msg_id,
-                details={"backend": image_backend, "summary_preview": _payload_preview(summary_text), "media_url": media_url},
-            )
-            return safe_json({
-                "success":    True,
-                "status":     "PASS",
-                "message_id": msg_id,
-                "media_url":  media_url,
-                "summary":    summary_text
-            })
+            payload["media_url"] = media_url
         else:
-            msg_id = MessageStore.save_message(
-                group_id, username, message_text, "FLAGGED",
-                reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
-            )
-            log_event(
-                logger,
-                logging.WARNING,
-                "image_message_flagged",
-                "Image message flagged",
-                category="moderation",
-                **_request_context(),
-                message_id=msg_id,
-                details={"backend": image_backend, "reason": result["reason"], "summary_preview": _payload_preview(summary_text)},
-            )
-            return safe_json({
-                "success": False,
-                "status":  "FLAGGED",
-                "message_id": msg_id,
-                "reason":  result["reason"],
-                "summary": summary_text
-            })
-
+            payload["reason"] = reason
+        return safe_json(payload)
 
     # ══════════════════════════════════════════════════════════════════════
     # AUDIO MESSAGES API
     # ══════════════════════════════════════════════════════════════════════
 
     @app.route("/api/groups/<group_id>/audio", methods=["POST"])
+    @login_required
     def api_send_audio(group_id):
         """
-        Accept a base64-encoded audio file, transcribe it via the configured
-        backend, then moderate the transcript against group rules.
+        Accept a base64-encoded audio clip, transcribe it, summarize the
+        transcript, then moderate the summary against group rules.
 
         Request body (JSON):
-            username   (str) — sender
             audio_data (str) — base64-encoded audio bytes
-            mime_type  (str) — e.g. "audio/wav", "audio/mpeg" (default: audio/wav)
+            mime_type  (str) — e.g. "audio/wav", "audio/webm" (default: audio/wav)
 
         Response:
-            success, status ("PASS"/"FLAGGED"), reason, transcript, media_url
+            success, status ("PASS"/"FLAGGED"), reason, summary, transcript, media_url
         """
-        data       = request.get_json()
-        username   = data.get("username",   "").strip()
-        audio_data = data.get("audio_data", "").strip()
-        mime_type  = data.get("mime_type",  "audio/wav").strip()
+        group, error = load_group(group_id)
+        if error:
+            return error
+        username = current_user()
+        limited = rate_limited("media", username)
+        if limited:
+            return limited
 
-        if not all([username, audio_data]):
-            return jsonify({"success": False, "message": "Username and audio_data required."}), 400
-
-        _bind_request_context(user=username, group_id=group_id)
-        group = GroupStore.get_group_details(group_id)
-        if not group:
-            return jsonify({"success": False, "message": "Group not found."}), 404
+        data = _json_body()
+        raw_bytes = _decode_base64(data.get("audio_data", ""))
+        if not raw_bytes:
+            return _error("Audio data required.", 400)
+        if len(raw_bytes) > MAX_AUDIO_BYTES:
+            return _error(f"Audio is too large (max {MAX_AUDIO_BYTES // (1024 * 1024)} MB).", 413)
+        ext, mime_type = audio_format(str(data.get("mime_type", "audio/wav")))
+        if not ext:
+            return _error("Unsupported audio format.", 400)
 
         audio_plugin = engine.get_plugin("audio_moderation")
         audio_backend = _plugin_backend_name(audio_plugin)
@@ -1128,17 +1253,13 @@ def create_app():
             return _service_unavailable_response("Audio")
 
         rules = group.get("rules", "")
-        moderation_sensitivity = group.get("moderation_sensitivity", "Moderate")
-        recent = MessageStore.get_visible_messages(group_id)
-        recent_context = [f"{m['username']}: {m['message']}" for m in recent[-6:]]
-
         try:
             result = engine.process("audio_moderation", {
-                "audio_data": audio_data,
-                "mime_type":  mime_type,
-                "rules":      rules,
-                "recent_messages": recent_context,
-                "moderation_sensitivity": moderation_sensitivity,
+                "audio_data": base64.b64encode(raw_bytes).decode("ascii"),
+                "mime_type": mime_type,
+                "rules": rules,
+                "recent_messages": recent_context(group_id),
+                "moderation_sensitivity": group.get("moderation_sensitivity", "Moderate"),
             })
         except Exception as e:
             log_event(
@@ -1164,112 +1285,54 @@ def create_app():
             )
             return _service_unavailable_response("Audio")
 
-        # Save audio file to disk so it persists and is playable from any client
-        ext = _normalize_audio_extension(mime_type)
-        filename  = f"{uuid.uuid4()}.{ext}"
-        filepath  = os.path.join(MEDIA_AUDIO_DIR, filename)
-        media_url = f"/media/audio/{filename}"
-
-        try:
-            raw_bytes = base64.b64decode(audio_data)
-            with open(filepath, "wb") as f:
-                f.write(raw_bytes)
-            log_event(
-                logger,
-                logging.INFO,
-                "audio_saved",
-                "Audio written to media storage",
-                category="media",
-                **_request_context(),
-                details={"file": filename, "bytes": len(raw_bytes), "mime_type": mime_type},
-            )
-        except Exception as e:
-            log_event(
-                logger,
-                logging.ERROR,
-                "audio_save_failed",
-                "Failed to persist audio",
-                category="media",
-                **_request_context(),
-                details={"error": str(e), "file": filename},
-            )
-            return jsonify({"success": False, "message": "Failed to save audio."}), 500
-
+        media_url = MediaStore.save("audio", group_id, username, raw_bytes, mime_type, ext)
         summary_text = result.get("summary", "")
-        transcript   = result.get("transcript", "")
-        message_text = "[AUDIO]"
-
+        transcript = result.get("transcript", "")
+        status = "PASS" if result["allowed"] else "FLAGGED"
+        reason = "" if result["allowed"] else result["reason"]
+        msg_id = MessageStore.save_message(
+            group_id, username, "[AUDIO]", status,
+            reason=reason, summary=summary_text, media_url=media_url, group_rules=rules,
+        )
+        log_event(
+            logger,
+            logging.INFO if result["allowed"] else logging.WARNING,
+            "audio_message_passed" if result["allowed"] else "audio_message_flagged",
+            "Audio message accepted" if result["allowed"] else "Audio message flagged",
+            category="moderation",
+            **_request_context(),
+            message_id=msg_id,
+            details={
+                "backend": audio_backend,
+                "reason": reason,
+                "summary_preview": _payload_preview(summary_text),
+                "transcript_preview": _payload_preview(transcript),
+            },
+        )
+        payload = {
+            "success": bool(result["allowed"]),
+            "status": status,
+            "message_id": msg_id,
+            "summary": summary_text,
+            "transcript": transcript,
+        }
         if result["allowed"]:
-            msg_id = MessageStore.save_message(
-                group_id, username, message_text, "PASS",
-                reason="", summary=summary_text, media_url=media_url, group_rules=rules
-            )
-            log_event(
-                logger,
-                logging.INFO,
-                "audio_message_passed",
-                "Audio message accepted",
-                category="moderation",
-                **_request_context(),
-                message_id=msg_id,
-                details={
-                    "backend": audio_backend,
-                    "summary_preview": _payload_preview(summary_text),
-                    "transcript_preview": _payload_preview(transcript),
-                },
-            )
-            return safe_json({
-                "success":    True,
-                "status":     "PASS",
-                "message_id": msg_id,
-                "media_url":  media_url,
-                "summary":    summary_text,
-                "transcript": transcript
-            })
+            payload["media_url"] = media_url
         else:
-            msg_id = MessageStore.save_message(
-                group_id, username, message_text, "FLAGGED",
-                reason=result["reason"], summary=summary_text, media_url=media_url, group_rules=rules
-            )
-            log_event(
-                logger,
-                logging.WARNING,
-                "audio_message_flagged",
-                "Audio message flagged",
-                category="moderation",
-                **_request_context(),
-                message_id=msg_id,
-                details={
-                    "backend": audio_backend,
-                    "reason": result["reason"],
-                    "summary_preview": _payload_preview(summary_text),
-                    "transcript_preview": _payload_preview(transcript),
-                },
-            )
-            return safe_json({
-                "success":    False,
-                "status":     "FLAGGED",
-                "message_id": msg_id,
-                "reason":     result["reason"],
-                "summary":    summary_text,
-                "transcript": transcript
-            })
-
+            payload["reason"] = reason
+        return safe_json(payload)
 
     # ══════════════════════════════════════════════════════════════════════
     # MODERATION REPORT API
     # ══════════════════════════════════════════════════════════════════════
 
     @app.route("/api/groups/<group_id>/report", methods=["GET"])
+    @login_required
     def api_moderation_report(group_id):
-        """
-        Returns a full moderation analytics report for the group.
-        Intended for admin panel view.
-        """
-        _bind_request_context(group_id=group_id)
-        details = GroupStore.get_group_details(group_id)
-        if not details:
-            return jsonify({"success": False, "message": "Group not found."}), 404
+        """Full moderation analytics report for the group admin."""
+        _group, error = load_group(group_id, admin_only=True)
+        if error:
+            return error
 
         report = MessageStore.get_moderation_report(group_id)
         log_event(
@@ -1287,11 +1350,11 @@ def create_app():
         return safe_json({"success": True, "report": report})
 
     @app.route("/api/groups/<group_id>/summary", methods=["GET"])
+    @login_required
     def api_group_summary(group_id):
-        _bind_request_context(group_id=group_id)
-        details = GroupStore.get_group_details(group_id)
-        if not details:
-            return jsonify({"success": False, "message": "Group not found."}), 404
+        _group, error = load_group(group_id)
+        if error:
+            return error
 
         try:
             limit = max(5, min(int(request.args.get("limit", "25")), 60))
@@ -1302,14 +1365,18 @@ def create_app():
         fallback_items = _fallback_summary_items(timeline)
 
         if not timeline:
-            return jsonify({
+            return safe_json({
                 "success": True,
                 "summary": {
                     "headline": "No recent activity",
                     "bullets": fallback_items,
                     "limit": limit,
                 }
-            }), 200
+            })
+
+        limited = rate_limited("ai", current_user())
+        if limited:
+            return limited
 
         transcript = "\n".join([
             f"{item['timestamp']} | {item['username']} | {item['type']}: {item['content']}"
@@ -1320,35 +1387,41 @@ def create_app():
             (
                 "Summarize the recent conversation into 3 to 5 concise bullet points. "
                 "Focus on decisions, updates, open questions, and current direction. "
-                "Do not mention every message. Keep it factual.\n\n"
+                "Do not mention every message. Keep it factual. "
+                "Start every bullet with '- '.\n\n"
                 f"Conversation:\n{transcript}"
             ),
             fallback_text="\n".join(f"- {item}" for item in fallback_items)
         )
         bullets = _extract_bullets(ai_text) or fallback_items
 
-        return jsonify({
+        return safe_json({
             "success": True,
             "summary": {
                 "headline": f"Catch-up from the last {len(timeline)} messages",
                 "bullets": bullets,
                 "limit": limit,
             }
-        }), 200
+        })
 
     @app.route("/api/rules/suggest", methods=["POST"])
+    @login_required
     def api_suggest_rules():
-        data = request.get_json() or {}
-        rules = (data.get("rules", "") or "").strip()
-        group_name = (data.get("group_name", "") or "").strip()
+        data = _json_body()
+        rules = str(data.get("rules", "") or "").strip()[:4000]
+        group_name = str(data.get("group_name", "") or "").strip()[:120]
 
         fallback = _fallback_rule_suggestions(rules)
         if not rules:
-            return jsonify({
+            return safe_json({
                 "success": True,
                 "suggestions": fallback["suggestions"],
                 "revised_rules": fallback["revised_rules"],
-            }), 200
+            })
+
+        limited = rate_limited("ai", current_user())
+        if limited:
+            return limited
 
         ai_text = run_text_task(
             "You improve moderation rules for online group chats.",
@@ -1367,142 +1440,146 @@ def create_app():
         )
 
         if "REVISED_RULES:" not in ai_text:
-            return jsonify({
+            return safe_json({
                 "success": True,
                 "suggestions": fallback["suggestions"],
                 "revised_rules": fallback["revised_rules"],
-            }), 200
+            })
 
         suggestions_part, revised_part = ai_text.split("REVISED_RULES:", 1)
+        suggestions_part = suggestions_part.replace("SUGGESTIONS:", "")
         suggestions = _extract_bullets(suggestions_part, min_items=2, max_items=4) or fallback["suggestions"]
-        revised_rules = revised_part.strip() or fallback["revised_rules"]
+        revised_rules = revised_part.replace("**", "").strip() or fallback["revised_rules"]
 
-        return jsonify({
+        return safe_json({
             "success": True,
             "suggestions": suggestions,
             "revised_rules": revised_rules,
-        }), 200
+        })
 
     @app.route("/api/rules/extract", methods=["POST"])
+    @login_required
     def api_extract_rules():
         """Extract text from an uploaded .txt or .pdf file for use as group rules."""
         if "file" not in request.files:
-            return jsonify({"success": False, "message": "No file provided."}), 400
+            return _error("No file provided.", 400)
 
         MAX_EXTRACT_BYTES = 5 * 1024 * 1024
         file = request.files["file"]
-        declared = request.content_length or 0
-        if declared and declared > MAX_EXTRACT_BYTES:
-            return jsonify({"success": False, "message": "File too large. Max 5 MB."}), 413
         filename = (file.filename or "").lower()
 
         if filename.endswith(".txt"):
-            try:
-                raw = file.read(MAX_EXTRACT_BYTES + 1)
-                if len(raw) > MAX_EXTRACT_BYTES:
-                    return jsonify({"success": False, "message": "File too large. Max 5 MB."}), 413
-                text = raw.decode("utf-8", errors="replace").strip()
-            except Exception as exc:
-                return jsonify({"success": False, "message": f"Failed to read text file: {exc}"}), 400
+            raw = file.read(MAX_EXTRACT_BYTES + 1)
+            if len(raw) > MAX_EXTRACT_BYTES:
+                return _error("File too large. Max 5 MB.", 413)
+            text = raw.decode("utf-8", errors="replace").strip()
         elif filename.endswith(".pdf"):
             try:
-                import io
                 import pdfplumber
-
-                pdf_bytes = file.read(MAX_EXTRACT_BYTES + 1)
-                if len(pdf_bytes) > MAX_EXTRACT_BYTES:
-                    return jsonify({"success": False, "message": "File too large. Max 5 MB."}), 413
+            except ImportError:
+                return _error("PDF support requires pdfplumber (pip install pdfplumber).", 500)
+            pdf_bytes = file.read(MAX_EXTRACT_BYTES + 1)
+            if len(pdf_bytes) > MAX_EXTRACT_BYTES:
+                return _error("File too large. Max 5 MB.", 413)
+            try:
                 text_parts = []
                 with pdfplumber.open(io.BytesIO(pdf_bytes)) as pdf:
-                    for page in pdf.pages:
+                    for page in pdf.pages[:30]:
                         page_text = page.extract_text()
                         if page_text:
                             text_parts.append(page_text.strip())
                 text = "\n".join(text_parts).strip()
-            except ImportError:
-                return jsonify({
-                    "success": False,
-                    "message": "PDF support requires pdfplumber. Install it with: pip install pdfplumber",
-                }), 500
             except Exception as exc:
-                return jsonify({"success": False, "message": f"Failed to read PDF: {exc}"}), 400
+                logger.warning("PDF rules extraction failed: %s", exc)
+                return _error("Could not read that PDF.", 400)
         else:
-            return jsonify({"success": False, "message": "Only .txt and .pdf files are supported."}), 400
+            return _error("Only .txt and .pdf files are supported.", 400)
 
         if not text:
-            return jsonify({"success": False, "message": "File appears to be empty."}), 400
+            return _error("File appears to be empty.", 400)
 
         max_rules_length = 4000
         if len(text) > max_rules_length:
             text = text[:max_rules_length].rsplit(" ", 1)[0] + "\n[Truncated - original document was too long]"
 
-        return jsonify({"success": True, "extracted_text": text}), 200
+        return safe_json({"success": True, "extracted_text": text})
 
     # ══════════════════════════════════════════════════════════════════════
-    # SETTINGS API
+    # SETTINGS / PROFILE API
     # ══════════════════════════════════════════════════════════════════════
 
     @app.route("/api/settings", methods=["GET"])
     def api_get_settings():
-        """Return user-facing application settings without exposing backend internals."""
+        """User-facing application settings (no secrets or internals)."""
+        ready = {name: info["status"] == "ready" for name, info in plugin_health.items()}
         safe_config = {
-            "moderation_status": "Active",
+            "moderation_status": "Active" if ready.get("text_moderation") else "Unavailable",
             "workspace_mode": "Protected",
-            "content_types": ["Text", "Image", "Audio"],
+            "content_types": [
+                label for label, plugin in (
+                    ("Text", "text_moderation"), ("Image", "image_moderation"), ("Audio", "audio_moderation")
+                ) if ready.get(plugin)
+            ],
             "features": [
                 "Real-time moderation",
                 "Appeal review flow",
                 "Admin analytics dashboard",
             ],
+            "ai_provider": AI_PROVIDER_PRESETS[AI_PROVIDER]["label"],
+            "capabilities": {
+                "text": bool(ready.get("text_moderation")),
+                "image": bool(ready.get("image_moderation")),
+                "audio": bool(ready.get("audio_moderation")),
+            },
+            "limits": {
+                "message_chars": MAX_MESSAGE_CHARS,
+                "image_mb": MAX_IMAGE_BYTES // (1024 * 1024),
+                "audio_mb": MAX_AUDIO_BYTES // (1024 * 1024),
+            },
             "app_version": APP_VERSION,
             "plugin_count": len(engine.list_plugins()),
         }
-        log_event(
-            logger,
-            logging.INFO,
-            "settings_viewed",
-            "User-facing settings loaded",
-            category="settings",
-            **_request_context(),
-            details={"plugin_count": safe_config["plugin_count"]},
-        )
-        return jsonify({"success": True, "settings": safe_config}), 200
+        return safe_json({"success": True, "settings": safe_config})
 
     @app.route("/api/user/profile", methods=["GET"])
+    @login_required
     def api_user_profile():
-        username = request.args.get("username", "")
-        if not username:
-            return jsonify({"success": False, "message": "Username required."}), 400
+        username = request.args.get("username", "").strip() or current_user()
         profile = UserStore.get_profile(username)
         if profile:
-            profile.pop("password", None)
             return safe_json({"success": True, "profile": profile})
-        return safe_json({"success": False, "message": "User not found."}, status=404)
+        return _error("User not found.", 404)
 
     @app.route("/api/user/profile", methods=["PUT"])
+    @login_required
     def api_update_profile():
-        data = request.get_json() or {}
-        username = data.get("username", "").strip()
-        full_name = data.get("full_name", None)
-        bio = data.get("bio", None)
-        avatar = data.get("avatar", None)
-
-        if not username:
-            return jsonify({"success": False, "message": "Username required."}), 400
-
-        _bind_request_context(user=username)
-        success, message = UserStore.update_profile(username, full_name, bio, avatar)
+        data = _json_body()
+        username = current_user()
+        success, message = UserStore.update_profile(
+            username, data.get("full_name"), data.get("bio"), data.get("avatar")
+        )
         if success:
             log_event(
                 logger, logging.INFO, "profile_updated",
                 "User profile updated", category="auth",
                 **_request_context(),
             )
-        status = 200 if success else 404
-        return jsonify({"success": success, "message": message}), status
+        return safe_json(
+            {"success": success, "message": message, "user": UserStore.get_profile(username)},
+            status=200 if success else 404,
+        )
+
+    @app.route("/api/user/password", methods=["PUT"])
+    @login_required
+    def api_change_password():
+        limited = rate_limited("auth", request.remote_addr)
+        if limited:
+            return limited
+        data = _json_body()
+        success, message = UserStore.change_password(
+            current_user(), str(data.get("current_password", "")), str(data.get("new_password", ""))
+        )
+        return safe_json({"success": success, "message": message}, status=200 if success else 400)
 
     logger.info("ConvoEase application initialized successfully")
     return app
-
-
-

@@ -109,7 +109,8 @@ class TextModerationPlugin(ProcessingPlugin):
             user_prompt = self._build_prompt(
                 message, rules, recent_messages, moderation_sensitivity
             )
-            content = self.generate_text(system_prompt, user_prompt, max_new_tokens=512)
+            # Generous budget: some models "think" before giving the verdict.
+            content = self.generate_text(system_prompt, user_prompt, max_new_tokens=1024)
             result = self._parse_response(content)
         except Exception as exc:
             logger.error("Moderation error: %s", exc)
@@ -307,13 +308,17 @@ NEW MESSAGE: "{message}"{normalized_line}
 
     @staticmethod
     def _parse_response(content):
-        if content.startswith("PASS"):
+        content = str(content or "").strip()
+        # Models sometimes wrap the verdict in markdown, e.g. "**FLAGGED**: ...".
+        verdict = content.lstrip("*_`# \n\t")
+        upper = verdict.upper()
+        if upper.startswith("PASS"):
             return {"allowed": True, "reason": ""}
-        if content.startswith("FLAGGED"):
-            reason = content.replace("FLAGGED", "", 1).strip().lstrip(":- ")
+        if upper.startswith("FLAGGED"):
+            reason = verdict[len("FLAGGED"):].strip().lstrip("*_`:- ").strip()
             return {"allowed": False, "reason": reason or "Flagged by moderation model."}
 
-        if not content.strip():
+        if not content:
             return {"allowed": False, "reason": "Moderation empty response (token limit reached?)."}
 
         lower = content.lower()

@@ -1,4 +1,5 @@
 import base64
+import os
 from pathlib import Path
 
 
@@ -10,74 +11,38 @@ def _assign(module, name, value, monkeypatch=None):
 
 
 def configure_test_environment(sandbox_root, monkeypatch=None):
+    """Point the app at a throwaway SQLite database inside sandbox_root."""
     import config
     import main as main_module
-    from database.Database_processing import db_manager, group_store, message_store, user_store
+    from database.Database_processing import DBManager
 
     sandbox_root = Path(sandbox_root)
-    db_dir = sandbox_root / "database" / "Databases"
-    media_dir = sandbox_root / "database" / "media"
-    image_dir = media_dir / "image"
-    audio_dir = media_dir / "audio"
-    video_dir = media_dir / "video"
+    media_dir = sandbox_root / "media"
     logs_dir = sandbox_root / "logs"
-
-    for directory in (db_dir, image_dir, audio_dir, video_dir, logs_dir):
+    for directory in (media_dir / "image", media_dir / "audio", logs_dir):
         directory.mkdir(parents=True, exist_ok=True)
 
-    users_file = db_dir / "users.csv"
-    groups_file = db_dir / "groups.csv"
-    members_file = db_dir / "group_members.csv"
-    chats_file = db_dir / "group_chats.csv"
+    database_path = sandbox_root / "convoease-test.db"
+    # Set CONVOEASE_TEST_DATABASE_URL to run the suite against Postgres; its
+    # tables are wiped before each test.
+    database_url = os.getenv("CONVOEASE_TEST_DATABASE_URL") or f"sqlite:///{database_path}"
 
-    config_updates = {
-        "DATABASE_DIR": str(db_dir),
-        "LOG_DIR": str(logs_dir),
-        "MEDIA_DIR": str(media_dir),
-        "MEDIA_IMAGE_DIR": str(image_dir),
-        "MEDIA_AUDIO_DIR": str(audio_dir),
-        "MEDIA_VIDEO_DIR": str(video_dir),
-        "USERS_FILE": str(users_file),
-        "GROUPS_FILE": str(groups_file),
-        "MEMBERS_FILE": str(members_file),
-        "CHATS_FILE": str(chats_file),
-    }
-    for name, value in config_updates.items():
-        _assign(config, name, value, monkeypatch)
-
-    for name, value in {
-        "DATABASE_DIR": str(db_dir),
-        "USERS_FILE": str(users_file),
-        "GROUPS_FILE": str(groups_file),
-        "MEMBERS_FILE": str(members_file),
-        "CHATS_FILE": str(chats_file),
-    }.items():
-        _assign(db_manager, name, value, monkeypatch)
-
-    db_manager.SCHEMAS["users"]["path"] = str(users_file)
-    db_manager.SCHEMAS["groups"]["path"] = str(groups_file)
-    db_manager.SCHEMAS["members"]["path"] = str(members_file)
-    db_manager.SCHEMAS["chats"]["path"] = str(chats_file)
-
-    _assign(user_store, "USERS_FILE", str(users_file), monkeypatch)
-    _assign(group_store, "GROUPS_FILE", str(groups_file), monkeypatch)
-    _assign(group_store, "MEMBERS_FILE", str(members_file), monkeypatch)
-    _assign(message_store, "CHATS_FILE", str(chats_file), monkeypatch)
-
+    _assign(config, "DATABASE_URL", database_url, monkeypatch)
+    _assign(config, "LOG_DIR", str(logs_dir), monkeypatch)
+    _assign(config, "MEDIA_DIR", str(media_dir), monkeypatch)
     _assign(main_module, "MEDIA_DIR", str(media_dir), monkeypatch)
-    _assign(main_module, "MEDIA_IMAGE_DIR", str(image_dir), monkeypatch)
-    _assign(main_module, "MEDIA_AUDIO_DIR", str(audio_dir), monkeypatch)
-    _assign(main_module, "MEDIA_VIDEO_DIR", str(video_dir), monkeypatch)
 
-    db_manager.DBManager.initialize()
+    if not database_url.startswith("sqlite"):
+        from database.Database_processing.db_manager import metadata
+
+        metadata.drop_all(DBManager.initialize(database_url))
+    DBManager.initialize(database_url)
 
     return {
         "sandbox_root": sandbox_root,
-        "database_dir": db_dir,
+        "database_url": database_url,
+        "database_path": database_path,
         "media_dir": media_dir,
-        "image_dir": image_dir,
-        "audio_dir": audio_dir,
-        "video_dir": video_dir,
         "logs_dir": logs_dir,
     }
 
@@ -158,8 +123,8 @@ def install_test_ai(monkeypatch=None):
         return "PASS"
 
     def fake_image_process(self, input_data, context=None):
-        image_data = input_data.get("image_data", "")
-        is_flagged = "YmFkaW1hZ2U=" in image_data or "dW5zYWZl" in image_data
+        image_bytes = base64.b64decode(input_data.get("image_data", "") or "")
+        is_flagged = b"badimage" in image_bytes or b"unsafe" in image_bytes
         summary = "A calm study desk setup." if not is_flagged else "An insulting meme with unsafe text."
         return {
             "allowed": not is_flagged,
@@ -168,8 +133,8 @@ def install_test_ai(monkeypatch=None):
         }
 
     def fake_audio_process(self, input_data, context=None):
-        audio_data = input_data.get("audio_data", "")
-        is_flagged = "YmFkYXVkaW8=" in audio_data or "dW5zYWZl" in audio_data
+        audio_bytes = base64.b64decode(input_data.get("audio_data", "") or "")
+        is_flagged = b"badaudio" in audio_bytes or b"unsafe" in audio_bytes
         transcript = "Study group reminder for tomorrow." if not is_flagged else "This audio contains a bad insult."
         summary = "Reminder about tomorrow's study session." if not is_flagged else "Unsafe spoken insult."
         return {
@@ -211,4 +176,17 @@ def install_test_ai(monkeypatch=None):
 
 def encode_payload(text):
     return base64.b64encode(text.encode("utf-8")).decode("utf-8")
+
+
+# Smallest valid-looking headers, so uploads pass the server's file-type check.
+PNG_HEADER = b"\x89PNG\r\n\x1a\n"
+WAV_HEADER = b"RIFF\x24\x00\x00\x00WAVEfmt "
+
+
+def image_payload(marker):
+    return base64.b64encode(PNG_HEADER + marker.encode("utf-8")).decode("ascii")
+
+
+def audio_payload(marker):
+    return base64.b64encode(WAV_HEADER + marker.encode("utf-8")).decode("ascii")
 

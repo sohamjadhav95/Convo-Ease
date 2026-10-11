@@ -44,7 +44,7 @@ def test_setup_logging_adds_debug_file_when_debug_level_enabled(tmp_path, monkey
     assert str((tmp_path / "debug.log").resolve()) in handler_paths
 
 
-def test_text_message_returns_503_when_moderation_plugin_is_unavailable(client, create_group, join_group, monkeypatch):
+def test_text_message_returns_503_when_moderation_plugin_is_unavailable(user, create_group, join_group, monkeypatch):
     import main
 
     group_id = create_group(rules="Be respectful. No insults.")
@@ -59,12 +59,37 @@ def test_text_message_returns_503_when_moderation_plugin_is_unavailable(client, 
 
     monkeypatch.setattr(main.ProcessingEngine, "get_plugin", fake_get_plugin)
 
-    response = client.post(
-        f"/api/groups/{group_id}/messages",
-        json={"username": "member1", "message": "This should not auto-pass"},
-    )
-    visible_response = client.get(f"/api/groups/{group_id}/messages")
+    member = user("member1")
+    response = member.post(f"/api/groups/{group_id}/messages", json={"message": "This should not auto-pass"})
+    visible_response = member.get(f"/api/groups/{group_id}/messages")
 
     assert response.status_code == 503
     assert response.get_json()["status"] == "UNAVAILABLE"
     assert visible_response.get_json()["messages"] == []
+
+
+def test_parse_response_handles_markdown_verdicts():
+    from core_processing_engine import TextModerationPlugin
+
+    assert TextModerationPlugin._parse_response("**PASS**")["allowed"] is True
+    flagged = TextModerationPlugin._parse_response("**FLAGGED**: off-topic promotion")
+    assert flagged == {"allowed": False, "reason": "off-topic promotion"}
+    assert TextModerationPlugin._parse_response("FLAGGED Insult toward a member")["reason"] == "Insult toward a member"
+
+
+def test_provider_presets_resolve_keys_and_models(monkeypatch):
+    import importlib
+
+    monkeypatch.setenv("CONVOEASE_AI_PROVIDER", "gemini")
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+    monkeypatch.setenv("CONVOEASE_IMAGE_MODEL_ID", "custom-vision")
+    reloaded = importlib.reload(config)
+    try:
+        assert reloaded.TEXT_MODEL_CONFIG["api_key"] == "test-key"
+        assert reloaded.TEXT_MODEL_CONFIG["base_url"].startswith("https://generativelanguage.googleapis.com")
+        assert reloaded.IMAGE_MODEL_CONFIG["api_model_id"] == "custom-vision"
+        assert reloaded.AUDIO_MODEL_CONFIG["backend"] == "api"
+        assert reloaded.AUDIO_MODEL_CONFIG["audio_mode"] == "chat"
+    finally:
+        monkeypatch.undo()
+        importlib.reload(config)

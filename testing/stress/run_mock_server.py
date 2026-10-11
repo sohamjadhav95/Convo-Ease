@@ -4,6 +4,8 @@ from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# Load tests send from one IP at high speed; the app's abuse limits would block them.
+os.environ.setdefault("CONVOEASE_RATE_LIMITS", "false")
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 

@@ -1,178 +1,241 @@
 """
 ConvoEase - Database Manager
-Central utilities for CSV database initialization, reading, and writing.
+Table definitions and connection handling.
+
+The app talks to the database through SQLAlchemy Core, so the same code runs on
+a local SQLite file (default) and on hosted Postgres (set DATABASE_URL).
 """
 
-import os
 import threading
-import tempfile
-import pandas as pd
-from config import DATABASE_DIR, USERS_FILE, GROUPS_FILE, MEMBERS_FILE, CHATS_FILE, setup_logging
+import time
+from datetime import datetime, timezone
+
+from sqlalchemy import (
+    Column,
+    Index,
+    Integer,
+    LargeBinary,
+    MetaData,
+    String,
+    Table,
+    Text,
+    create_engine,
+    event,
+    inspect,
+    text,
+)
+
+import config
+from config import setup_logging
 
 logger = setup_logging("db_manager")
 
-# Schema definitions - single source of truth for CSV columns
-SCHEMAS = {
-    "users": {
-        "path": USERS_FILE,
-        "columns": ["username", "password", "full_name", "bio", "profile_pic_color", "avatar", "created_at"]
-    },
-    "groups": {
-        "path": GROUPS_FILE,
-        "columns": [
-            "group_id", "group_name", "admin_username", "password", "rules",
-            "moderation_sensitivity", "created_at"
-        ]
-    },
-    "members": {
-        "path": MEMBERS_FILE,
-        "columns": ["group_id", "username", "joined_at"]
-    },
-    "chats": {
-        "path": CHATS_FILE,
-        "columns": [
-            "message_id", "group_id", "username", "message", "status", "reason",
-            "summary", "media_url", "group_rules", "timestamp",
-            "initial_status", "initial_reason",
-            "detected_language", "language_confidence", "translated_message",
-            "appeal_status", "appeal_text", "appeal_ai_status", "appeal_ai_reason",
-            "appeal_submitted_at", "appeal_reviewed_by", "appeal_reviewed_at", "appeal_admin_note"
-        ]
-    }
-}
+metadata = MetaData()
 
-# Per-file locks. A dict keyed by absolute path -> RLock.
-# RLock because some flows may safely re-enter the same file lock in one thread.
-_FILE_LOCKS = {}
-_FILE_LOCKS_LOCK = threading.Lock()
+users = Table(
+    "users",
+    metadata,
+    Column("username", String(64), primary_key=True),
+    Column("password", String(255), nullable=False),
+    Column("full_name", String(120), nullable=False, default=""),
+    Column("bio", Text, nullable=False, default=""),
+    Column("profile_pic_color", String(16), nullable=False, default=""),
+    Column("avatar", String(32), nullable=False, default=""),
+    Column("created_at", String(19), nullable=False),
+)
+
+chat_groups = Table(
+    "chat_groups",
+    metadata,
+    Column("group_id", String(16), primary_key=True),
+    Column("group_name", String(120), nullable=False),
+    Column("admin_username", String(64), nullable=False),
+    Column("password", String(255), nullable=False, default=""),
+    Column("rules", Text, nullable=False, default=""),
+    Column("moderation_sensitivity", String(16), nullable=False, default="Moderate"),
+    Column("created_at", String(19), nullable=False),
+)
+
+group_members = Table(
+    "group_members",
+    metadata,
+    Column("group_id", String(16), primary_key=True),
+    Column("username", String(64), primary_key=True),
+    Column("joined_at", String(19), nullable=False),
+    # Highest message seq this member has seen; drives unread counts.
+    Column("last_read_seq", Integer, nullable=False, default=0),
+)
+
+messages = Table(
+    "messages",
+    metadata,
+    # seq gives a stable order even when two messages share a timestamp.
+    Column("seq", Integer, primary_key=True, autoincrement=True),
+    Column("message_id", String(36), nullable=False, unique=True),
+    Column("group_id", String(16), nullable=False),
+    Column("username", String(64), nullable=False),
+    Column("message", Text, nullable=False, default=""),
+    Column("status", String(16), nullable=False),
+    Column("reason", Text, nullable=False, default=""),
+    Column("summary", Text, nullable=False, default=""),
+    Column("media_url", String(255), nullable=False, default=""),
+    Column("group_rules", Text, nullable=False, default=""),
+    Column("timestamp", String(19), nullable=False),
+    Column("initial_status", String(16), nullable=False, default=""),
+    Column("initial_reason", Text, nullable=False, default=""),
+    Column("detected_language", String(16), nullable=False, default=""),
+    Column("language_confidence", String(16), nullable=False, default=""),
+    Column("translated_message", Text, nullable=False, default=""),
+    Column("appeal_status", String(16), nullable=False, default=""),
+    Column("appeal_text", Text, nullable=False, default=""),
+    Column("appeal_ai_status", String(16), nullable=False, default=""),
+    Column("appeal_ai_reason", Text, nullable=False, default=""),
+    Column("appeal_submitted_at", String(19), nullable=False, default=""),
+    Column("appeal_reviewed_by", String(64), nullable=False, default=""),
+    Column("appeal_reviewed_at", String(19), nullable=False, default=""),
+    Column("appeal_admin_note", Text, nullable=False, default=""),
+    Index("ix_messages_group_seq", "group_id", "seq"),
+)
+
+media = Table(
+    "media",
+    metadata,
+    Column("media_id", String(64), primary_key=True),  # "<uuid>.<ext>"
+    Column("kind", String(8), nullable=False),  # image | audio
+    Column("group_id", String(16), nullable=False, index=True),
+    Column("username", String(64), nullable=False),
+    Column("mime_type", String(64), nullable=False),
+    Column("size", Integer, nullable=False),
+    Column("data", LargeBinary, nullable=False),
+    Column("created_at", String(19), nullable=False),
+)
+
+MESSAGE_COLUMNS = [c.name for c in messages.columns]
 
 
-def _lock_for(path):
-    """Return the RLock guarding a given CSV file, creating it if needed."""
-    abs_path = os.path.abspath(path)
-    with _FILE_LOCKS_LOCK:
-        if abs_path not in _FILE_LOCKS:
-            _FILE_LOCKS[abs_path] = threading.RLock()
-        return _FILE_LOCKS[abs_path]
+def utc_now():
+    """Timestamps are stored in UTC as 'YYYY-MM-DD HH:MM:SS'."""
+    return datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+
+
+def normalize_database_url(url):
+    url = (url or "").strip()
+    # Many hosts hand out postgres:// URLs; SQLAlchemy wants an explicit driver.
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
+
+
+_engine = None
+_engine_lock = threading.Lock()
+
+
+def _create_engine(url):
+    if url.startswith("sqlite"):
+        engine = create_engine(
+            url,
+            connect_args={"check_same_thread": False, "timeout": 30},
+        )
+
+        @event.listens_for(engine, "connect")
+        def _sqlite_pragmas(dbapi_connection, _record):
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA synchronous=NORMAL")
+            cursor.execute("PRAGMA busy_timeout=30000")
+            cursor.close()
+
+        return engine
+
+    # Hosted Postgres drops idle connections, so check them before use.
+    return create_engine(
+        url,
+        pool_pre_ping=True,
+        pool_recycle=300,
+        pool_size=5,
+        max_overflow=5,
+    )
 
 
 class DBManager:
-    """Handles database directory creation & CSV initialization."""
+    """Creates the engine and the tables."""
 
     @staticmethod
-    def initialize():
-        """Create database directory and empty CSV files if they don't exist."""
-        os.makedirs(DATABASE_DIR, exist_ok=True)
-        for name, schema in SCHEMAS.items():
-            with _lock_for(schema["path"]):
-                if not os.path.exists(schema["path"]):
-                    pd.DataFrame(columns=schema["columns"]).to_csv(
-                        schema["path"], index=False, encoding="utf-8"
-                    )
-                    logger.info(f"Created empty database file: {schema['path']}")
-                else:
-                    DBManager._migrate_schema(schema["path"], schema["columns"])
-        DBManager._migrate_group_passwords_to_hashed()
+    def initialize(database_url=None):
+        """Connect to the database and create any missing tables."""
+        global _engine
+        url = normalize_database_url(database_url or config.DATABASE_URL)
+        with _engine_lock:
+            if _engine is not None:
+                _engine.dispose()
+            _engine = _create_engine(url)
+            DBManager._create_schema(_engine)
+        logger.info("Database ready (%s)", url.split("://", 1)[0])
+        return _engine
 
     @staticmethod
-    def _migrate_schema(file_path, columns):
-        """Add any missing schema columns to existing CSV files.
-        Caller is expected to hold _lock_for(file_path).
-        """
-        df = pd.read_csv(file_path, encoding="utf-8")
-        changed = False
-        for column in columns:
-            if column not in df.columns:
-                df[column] = ""
-                changed = True
-        if changed:
-            ordered = [c for c in columns if c in df.columns] + [c for c in df.columns if c not in columns]
-            df = df[ordered]
-            DBManager._atomic_write(file_path, df)
-            logger.info(f"Migrated schema for: {file_path}")
-
-    @staticmethod
-    def _migrate_group_passwords_to_hashed():
-        """One-time migration: pre-hash existing plaintext group passwords.
-        Detects plaintext by length (SHA-256 hex is always 64 chars). Safe to
-        run repeatedly - already-hashed rows are untouched.
-        """
-        from .user_store import hash_password as _hash
-
-        path = SCHEMAS["groups"]["path"]
-        if not os.path.exists(path):
-            return
-        with _lock_for(path):
-            df = pd.read_csv(path, encoding="utf-8", dtype=str).fillna("")
-            if "password" not in df.columns:
+    def _create_schema(engine, attempts=3):
+        # Several server workers may start at once against a fresh database;
+        # if another one wins the race to create a table, just try again.
+        for attempt in range(1, attempts + 1):
+            try:
+                metadata.create_all(engine)
+                DBManager._add_missing_columns(engine)
                 return
-            changed = False
-            for i, pw in enumerate(df["password"].tolist()):
-                if pw and len(pw) != 64:
-                    df.at[i, "password"] = _hash(pw)
-                    changed = True
-            if changed:
-                DBManager._atomic_write(path, df)
-                logger.info("Migrated legacy plaintext group passwords to hashed form.")
+            except Exception as exc:
+                if attempt == attempts:
+                    raise
+                logger.warning("Schema setup retry %d after: %s", attempt, exc)
+                time.sleep(0.5 * attempt)
 
     @staticmethod
-    def read_csv(file_path, as_string=True):
-        """Read a CSV file and return a DataFrame. Returns empty DataFrame with
-        correct schema if missing. Thread-safe under the per-file lock.
-        """
-        with _lock_for(file_path):
-            for name, schema in SCHEMAS.items():
-                if schema["path"] == file_path:
-                    if os.path.exists(file_path):
-                        df = pd.read_csv(file_path, encoding="utf-8")
-                        if as_string:
-                            df = df.astype(str)
-                            df = df.replace("nan", "")
-                        return df
-                    return pd.DataFrame(columns=schema["columns"])
-
-            if os.path.exists(file_path):
-                df = pd.read_csv(file_path, encoding="utf-8")
-                return df.astype(str) if as_string else df
-            return pd.DataFrame()
+    def engine():
+        if _engine is None:
+            DBManager.initialize()
+        return _engine
 
     @staticmethod
-    def write_csv(file_path, dataframe):
-        """Write a DataFrame to a CSV file atomically (tempfile + os.replace).
-        Thread-safe under the per-file lock.
-        """
-        with _lock_for(file_path):
-            DBManager._atomic_write(file_path, dataframe)
+    def _add_missing_columns(engine):
+        """Tiny forward-only migration: add columns that newer code expects."""
+        inspector = inspect(engine)
+        for table in metadata.sorted_tables:
+            existing = {col["name"] for col in inspector.get_columns(table.name)}
+            for column in table.columns:
+                if column.name in existing:
+                    continue
+                col_type = column.type.compile(dialect=engine.dialect)
+                default = "0" if isinstance(column.type, Integer) else "''"
+                with engine.begin() as conn:
+                    conn.execute(text(
+                        f'ALTER TABLE {table.name} ADD COLUMN "{column.name}" {col_type} '
+                        f"NOT NULL DEFAULT {default}"
+                    ))
+                logger.info("Added column %s.%s", table.name, column.name)
 
     @staticmethod
-    def _atomic_write(file_path, dataframe):
-        """Write to a temp file in the same directory, then atomic replace.
-        Caller must already hold _lock_for(file_path).
-        """
-        abs_path = os.path.abspath(file_path)
-        directory = os.path.dirname(abs_path) or "."
-        fd, tmp_path = tempfile.mkstemp(
-            prefix=".tmp_", suffix=".csv", dir=directory
-        )
-        try:
-            os.close(fd)
-            dataframe.to_csv(tmp_path, index=False, encoding="utf-8")
-            os.replace(tmp_path, abs_path)
-        except Exception:
-            if os.path.exists(tmp_path):
-                try:
-                    os.remove(tmp_path)
-                except OSError:
-                    pass
-            raise
+    def fetch_all(statement):
+        with DBManager.engine().connect() as conn:
+            return [dict(row._mapping) for row in conn.execute(statement)]
 
     @staticmethod
-    def append_row(file_path, row_dict):
-        """Append a single row to a CSV file. Read-modify-write is now safe
-        because it holds the per-file RLock for the entire operation.
-        """
-        with _lock_for(file_path):
-            df = DBManager.read_csv(file_path, as_string=False)
-            new_row = pd.DataFrame([row_dict])
-            df = pd.concat([df, new_row], ignore_index=True)
-            DBManager._atomic_write(file_path, df)
+    def fetch_one(statement):
+        with DBManager.engine().connect() as conn:
+            row = conn.execute(statement).first()
+            return dict(row._mapping) if row is not None else None
+
+    @staticmethod
+    def scalar(statement):
+        with DBManager.engine().connect() as conn:
+            return conn.execute(statement).scalar()
+
+    @staticmethod
+    def execute(statement):
+        with DBManager.engine().begin() as conn:
+            return conn.execute(statement)
+
+    @staticmethod
+    def begin():
+        """Transaction context manager for multi-statement writes."""
+        return DBManager.engine().begin()

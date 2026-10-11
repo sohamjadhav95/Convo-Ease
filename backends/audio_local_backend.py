@@ -40,7 +40,8 @@ class LocalAudioBackend(AudioBackend):
             if ffmpeg_path and os.path.isfile(ffmpeg_path):
                 ffmpeg_dir = os.path.join(tempfile.gettempdir(), "convoease-ffmpeg")
                 os.makedirs(ffmpeg_dir, exist_ok=True)
-                shim_path = os.path.join(ffmpeg_dir, "ffmpeg.exe")
+                shim_name = "ffmpeg.exe" if os.name == "nt" else "ffmpeg"
+                shim_path = os.path.join(ffmpeg_dir, shim_name)
                 if not os.path.isfile(shim_path):
                     shutil.copy2(ffmpeg_path, shim_path)
                 return ffmpeg_dir

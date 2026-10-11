@@ -642,6 +642,7 @@ function onLoginSuccess() {
 
 function logout() {
     sessionStorage.removeItem('ce_session');
+    API.request('POST', '/api/auth/logout');
     AudioRecorder.cancel();
     State.user = null;
     State.groups = [];
@@ -2404,20 +2405,16 @@ document.addEventListener('DOMContentLoaded', () => {
     initEventBindings();
     ThemeManager.bindControls();
 
-    // Restore session if available
-    const savedSession = sessionStorage.getItem('ce_session');
-    if (savedSession) {
-        try {
-            const userData = JSON.parse(savedSession);
-            if (userData && userData.username) {
-                State.user = userData;
-                onLoginSuccess();
-                return;
-            }
-        } catch (e) {
-            sessionStorage.removeItem('ce_session');
+    // Restore the server session (cookie) if there is one
+    API.request('GET', '/api/auth/me').then((data) => {
+        if (data.success && data.user) {
+            State.user = data.user;
+            sessionStorage.setItem('ce_session', JSON.stringify(data.user));
+            onLoginSuccess();
+            return;
         }
-    }
-    navigateTo('auth');
+        sessionStorage.removeItem('ce_session');
+        navigateTo('auth');
+    });
 });
 
