@@ -77,7 +77,10 @@ def test_audio_upload_pass_is_saved(user, create_group, join_group, media_payloa
     assert served.mimetype == "audio/wav"
 
 
-def test_browser_recording_webm_is_accepted(user, create_group, media_payloads):
+def test_webm_is_accepted_when_provider_supports_it(user, create_group, media_payloads, monkeypatch):
+    import main
+
+    monkeypatch.setitem(main.AUDIO_MODEL_CONFIG, "audio_formats", ())
     group_id = create_group()
 
     response = user("admin").post(
@@ -87,6 +90,22 @@ def test_browser_recording_webm_is_accepted(user, create_group, media_payloads):
 
     assert response.status_code == 200
     assert response.get_json()["media_url"].endswith(".webm")
+
+
+def test_webm_is_rejected_clearly_when_provider_needs_wav_or_mp3(user, create_group, media_payloads, monkeypatch):
+    import main
+
+    monkeypatch.setitem(main.AUDIO_MODEL_CONFIG, "audio_formats", ("wav", "mp3"))
+    monkeypatch.setitem(main.AUDIO_MODEL_CONFIG, "backend", "api")
+    group_id = create_group()
+
+    response = user("admin").post(
+        f"/api/groups/{group_id}/audio",
+        json={"audio_data": media_payloads["good_audio"], "mime_type": "audio/webm"},
+    )
+
+    assert response.status_code == 400
+    assert response.get_json()["message"] == "Please send WAV or MP3 audio."
 
 
 def test_unsupported_audio_type_is_rejected(user, create_group, media_payloads):

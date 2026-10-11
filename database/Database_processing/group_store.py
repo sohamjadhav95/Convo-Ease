@@ -118,11 +118,14 @@ class GroupStore:
                 last_rows[row["group_id"]] = row
 
         from .message_store import MessageStore
+        from .user_store import UserStore
 
+        names = UserStore.get_profiles(row["username"] for row in last_rows.values())
         for record in records:
             last = last_rows.get(record["group_id"])
             record["last_message"] = MessageStore._display_message(last) if last else ""
             record["last_message_user"] = last["username"] if last else ""
+            record["last_message_name"] = (names.get(last["username"]) or {}).get("full_name", "") if last else ""
             record["last_message_at"] = last["timestamp"] if last else ""
             record["last_seq"] = last["seq"] if last else 0
             record["is_admin"] = record["admin_username"] == username
@@ -135,6 +138,18 @@ class GroupStore:
                 ))
             ) or 0
             record.pop("last_read_seq", None)
+            record["held_count"] = 0
+            record["pending_appeals"] = 0
+            if record["is_admin"]:
+                flagged = and_(messages.c.group_id == record["group_id"], messages.c.status == "FLAGGED")
+                record["held_count"] = DBManager.scalar(
+                    select(func.count()).select_from(messages).where(flagged)
+                ) or 0
+                record["pending_appeals"] = DBManager.scalar(
+                    select(func.count()).select_from(messages).where(and_(
+                        flagged, messages.c.appeal_status == "PENDING_ADMIN"
+                    ))
+                ) or 0
 
         records.sort(key=lambda r: r["last_message_at"] or r["joined_at"] or "", reverse=True)
         return records

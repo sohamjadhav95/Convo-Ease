@@ -150,8 +150,11 @@ def _create_engine(url):
         return engine
 
     # Hosted Postgres drops idle connections, so check them before use.
+    # prepare_threshold=None turns off server-side prepared statements, which
+    # break behind transaction poolers such as Neon's or Supabase's.
     return create_engine(
         url,
+        connect_args={"prepare_threshold": None},
         pool_pre_ping=True,
         pool_recycle=300,
         pool_size=5,

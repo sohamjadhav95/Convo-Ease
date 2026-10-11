@@ -1,0 +1,325 @@
+/* ConvoEase design tokens — Material Design 3.
+   Colors: one scheme per accent, light and dark. The theme script sets
+   data-theme ("light" | "dark") and data-accent on <html>. */
+
+/* Generated with Material Color Utilities (tonal spot) from seed colors:
+   teal #00796B, indigo #3F51B5, rose #C2185B, amber #B26A00 */
+:root,
+[data-accent="teal"] {
+  --md-primary: #006B5E;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #9FF2E2;
+  --md-on-primary-container: #005047;
+  --md-secondary: #4A635E;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #CDE8E1;
+  --md-on-secondary-container: #334B46;
+  --md-tertiary: #446179;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #CAE6FF;
+  --md-on-tertiary-container: #2C4A60;
+  --md-error: #BA1A1A;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFDAD6;
+  --md-on-error-container: #93000A;
+  --md-surface: #F4FBF8;
+  --md-on-surface: #171D1B;
+  --md-on-surface-variant: #3F4946;
+  --md-surface-container-lowest: #FFFFFF;
+  --md-surface-container-low: #EFF5F2;
+  --md-surface-container: #E9EFEC;
+  --md-surface-container-high: #E3EAE7;
+  --md-surface-container-highest: #DDE4E1;
+  --md-surface-dim: #D5DBD9;
+  --md-surface-bright: #F4FBF8;
+  --md-outline: #6F7976;
+  --md-outline-variant: #BEC9C5;
+  --md-inverse-surface: #2B3230;
+  --md-inverse-on-surface: #ECF2EF;
+  --md-inverse-primary: #83D5C6;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-theme="dark"],
+[data-theme="dark"][data-accent="teal"] {
+  --md-primary: #83D5C6;
+  --md-on-primary: #003730;
+  --md-primary-container: #005047;
+  --md-on-primary-container: #9FF2E2;
+  --md-secondary: #B1CCC5;
+  --md-on-secondary: #1C3530;
+  --md-secondary-container: #334B46;
+  --md-on-secondary-container: #CDE8E1;
+  --md-tertiary: #ACCAE5;
+  --md-on-tertiary: #133348;
+  --md-tertiary-container: #2C4A60;
+  --md-on-tertiary-container: #CAE6FF;
+  --md-error: #FFB4AB;
+  --md-on-error: #690005;
+  --md-error-container: #93000A;
+  --md-on-error-container: #FFDAD6;
+  --md-surface: #0E1513;
+  --md-on-surface: #DDE4E1;
+  --md-on-surface-variant: #BEC9C5;
+  --md-surface-container-lowest: #090F0E;
+  --md-surface-container-low: #171D1B;
+  --md-surface-container: #1B211F;
+  --md-surface-container-high: #252B2A;
+  --md-surface-container-highest: #303634;
+  --md-surface-dim: #0E1513;
+  --md-surface-bright: #343B39;
+  --md-outline: #899390;
+  --md-outline-variant: #3F4946;
+  --md-inverse-surface: #DDE4E1;
+  --md-inverse-on-surface: #2B3230;
+  --md-inverse-primary: #006B5E;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-accent="indigo"] {
+  --md-primary: #515B92;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #DEE0FF;
+  --md-on-primary-container: #394379;
+  --md-secondary: #5B5D72;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #E0E1F9;
+  --md-on-secondary-container: #434659;
+  --md-tertiary: #77536D;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #FFD7F1;
+  --md-on-tertiary-container: #5D3C55;
+  --md-error: #BA1A1A;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFDAD6;
+  --md-on-error-container: #93000A;
+  --md-surface: #FBF8FF;
+  --md-on-surface: #1B1B21;
+  --md-on-surface-variant: #46464F;
+  --md-surface-container-lowest: #FFFFFF;
+  --md-surface-container-low: #F5F2FA;
+  --md-surface-container: #EFEDF4;
+  --md-surface-container-high: #E9E7EF;
+  --md-surface-container-highest: #E4E1E9;
+  --md-surface-dim: #DBD9E0;
+  --md-surface-bright: #FBF8FF;
+  --md-outline: #767680;
+  --md-outline-variant: #C7C5D0;
+  --md-inverse-surface: #303036;
+  --md-inverse-on-surface: #F2EFF7;
+  --md-inverse-primary: #BAC3FF;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-theme="dark"][data-accent="indigo"] {
+  --md-primary: #BAC3FF;
+  --md-on-primary: #222C61;
+  --md-primary-container: #394379;
+  --md-on-primary-container: #DEE0FF;
+  --md-secondary: #C3C5DD;
+  --md-on-secondary: #2D2F42;
+  --md-secondary-container: #434659;
+  --md-on-secondary-container: #E0E1F9;
+  --md-tertiary: #E6BAD7;
+  --md-on-tertiary: #44263D;
+  --md-tertiary-container: #5D3C55;
+  --md-on-tertiary-container: #FFD7F1;
+  --md-error: #FFB4AB;
+  --md-on-error: #690005;
+  --md-error-container: #93000A;
+  --md-on-error-container: #FFDAD6;
+  --md-surface: #121318;
+  --md-on-surface: #E4E1E9;
+  --md-on-surface-variant: #C7C5D0;
+  --md-surface-container-lowest: #0D0E13;
+  --md-surface-container-low: #1B1B21;
+  --md-surface-container: #1F1F25;
+  --md-surface-container-high: #29292F;
+  --md-surface-container-highest: #34343A;
+  --md-surface-dim: #121318;
+  --md-surface-bright: #39393F;
+  --md-outline: #90909A;
+  --md-outline-variant: #46464F;
+  --md-inverse-surface: #E4E1E9;
+  --md-inverse-on-surface: #303036;
+  --md-inverse-primary: #515B92;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-accent="rose"] {
+  --md-primary: #8D4A5A;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #FFD9DF;
+  --md-on-primary-container: #713343;
+  --md-secondary: #75565C;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #FFD9DF;
+  --md-on-secondary-container: #5B3F45;
+  --md-tertiary: #7A5733;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #FFDCBD;
+  --md-on-tertiary-container: #60401D;
+  --md-error: #BA1A1A;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFDAD6;
+  --md-on-error-container: #93000A;
+  --md-surface: #FFF8F7;
+  --md-on-surface: #22191B;
+  --md-on-surface-variant: #524346;
+  --md-surface-container-lowest: #FFFFFF;
+  --md-surface-container-low: #FFF0F1;
+  --md-surface-container: #FBEAEC;
+  --md-surface-container-high: #F5E4E6;
+  --md-surface-container-highest: #EFDEE0;
+  --md-surface-dim: #E7D6D8;
+  --md-surface-bright: #FFF8F7;
+  --md-outline: #847375;
+  --md-outline-variant: #D6C2C4;
+  --md-inverse-surface: #382E30;
+  --md-inverse-on-surface: #FEEDEE;
+  --md-inverse-primary: #FFB1C2;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-theme="dark"][data-accent="rose"] {
+  --md-primary: #FFB1C2;
+  --md-on-primary: #551D2D;
+  --md-primary-container: #713343;
+  --md-on-primary-container: #FFD9DF;
+  --md-secondary: #E4BDC3;
+  --md-on-secondary: #43292F;
+  --md-secondary-container: #5B3F45;
+  --md-on-secondary-container: #FFD9DF;
+  --md-tertiary: #ECBE91;
+  --md-on-tertiary: #462A09;
+  --md-tertiary-container: #60401D;
+  --md-on-tertiary-container: #FFDCBD;
+  --md-error: #FFB4AB;
+  --md-on-error: #690005;
+  --md-error-container: #93000A;
+  --md-on-error-container: #FFDAD6;
+  --md-surface: #191113;
+  --md-on-surface: #EFDEE0;
+  --md-on-surface-variant: #D6C2C4;
+  --md-surface-container-lowest: #140C0E;
+  --md-surface-container-low: #22191B;
+  --md-surface-container: #261D1F;
+  --md-surface-container-high: #312829;
+  --md-surface-container-highest: #3C3234;
+  --md-surface-dim: #191113;
+  --md-surface-bright: #413738;
+  --md-outline: #9E8C8F;
+  --md-outline-variant: #524346;
+  --md-inverse-surface: #EFDEE0;
+  --md-inverse-on-surface: #382E30;
+  --md-inverse-primary: #8D4A5A;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-accent="amber"] {
+  --md-primary: #855317;
+  --md-on-primary: #FFFFFF;
+  --md-primary-container: #FFDCBD;
+  --md-on-primary-container: #693C00;
+  --md-secondary: #725A42;
+  --md-on-secondary: #FFFFFF;
+  --md-secondary-container: #FEDDBE;
+  --md-on-secondary-container: #59422C;
+  --md-tertiary: #57633A;
+  --md-on-tertiary: #FFFFFF;
+  --md-tertiary-container: #DBE8B5;
+  --md-on-tertiary-container: #404B25;
+  --md-error: #BA1A1A;
+  --md-on-error: #FFFFFF;
+  --md-error-container: #FFDAD6;
+  --md-on-error-container: #93000A;
+  --md-surface: #FFF8F4;
+  --md-on-surface: #211A14;
+  --md-on-surface-variant: #50453A;
+  --md-surface-container-lowest: #FFFFFF;
+  --md-surface-container-low: #FFF1E7;
+  --md-surface-container: #FAEBE0;
+  --md-surface-container-high: #F4E6DA;
+  --md-surface-container-highest: #EEE0D5;
+  --md-surface-dim: #E6D7CD;
+  --md-surface-bright: #FFF8F4;
+  --md-outline: #837568;
+  --md-outline-variant: #D5C3B5;
+  --md-inverse-surface: #372F28;
+  --md-inverse-on-surface: #FDEEE3;
+  --md-inverse-primary: #FCB974;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+[data-theme="dark"][data-accent="amber"] {
+  --md-primary: #FCB974;
+  --md-on-primary: #492900;
+  --md-primary-container: #693C00;
+  --md-on-primary-container: #FFDCBD;
+  --md-secondary: #E1C1A3;
+  --md-on-secondary: #402C18;
+  --md-secondary-container: #59422C;
+  --md-on-secondary-container: #FEDDBE;
+  --md-tertiary: #BFCC9B;
+  --md-on-tertiary: #2A3410;
+  --md-tertiary-container: #404B25;
+  --md-on-tertiary-container: #DBE8B5;
+  --md-error: #FFB4AB;
+  --md-on-error: #690005;
+  --md-error-container: #93000A;
+  --md-on-error-container: #FFDAD6;
+  --md-surface: #19120C;
+  --md-on-surface: #EEE0D5;
+  --md-on-surface-variant: #D5C3B5;
+  --md-surface-container-lowest: #130D07;
+  --md-surface-container-low: #211A14;
+  --md-surface-container: #261E18;
+  --md-surface-container-high: #302921;
+  --md-surface-container-highest: #3C332C;
+  --md-surface-dim: #19120C;
+  --md-surface-bright: #403830;
+  --md-outline: #9D8E81;
+  --md-outline-variant: #50453A;
+  --md-inverse-surface: #EEE0D5;
+  --md-inverse-on-surface: #372F28;
+  --md-inverse-primary: #855317;
+  --md-scrim: #000000;
+  --md-shadow: #000000;
+}
+
+
+:root {
+  color-scheme: light;
+
+  /* Typography (M3 type scale) */
+  --font: "Roboto Flex", "Roboto", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Roboto Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* Shape */
+  --shape-xs: 4px;
+  --shape-sm: 8px;
+  --shape-md: 12px;
+  --shape-lg: 16px;
+  --shape-xl: 28px;
+  --shape-full: 999px;
+
+  /* Elevation */
+  --elev-1: 0 1px 2px rgb(0 0 0 / .3), 0 1px 3px 1px rgb(0 0 0 / .15);
+  --elev-2: 0 1px 2px rgb(0 0 0 / .3), 0 2px 6px 2px rgb(0 0 0 / .15);
+  --elev-3: 0 1px 3px rgb(0 0 0 / .3), 0 4px 8px 3px rgb(0 0 0 / .15);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(.2, 0, 0, 1);
+  --ease-emphasized-decel: cubic-bezier(.05, .7, .1, 1);
+  --dur-short: 150ms;
+  --dur-medium: 300ms;
+}
+
+[data-theme="dark"] { color-scheme: dark; }

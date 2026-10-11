@@ -71,8 +71,10 @@ AI_PROVIDER_PRESETS = {
         "text_model": "gemini-3.5-flash-lite",
         "image_model": "gemini-3.5-flash-lite",
         "audio_model": "gemini-3.5-flash-lite",
-        # Gemini understands audio directly inside a chat request.
+        # Gemini understands audio directly inside a chat request,
+        # but only as WAV or MP3 (the web app converts recordings to WAV).
         "audio_mode": "chat",
+        "audio_formats": ("wav", "mp3"),
     },
     "groq": {
         "label": "Groq",
@@ -157,6 +159,7 @@ def _modality_config(modality):
         "base_url": base_url,
         "api_model_id": os.getenv(f"CONVOEASE_{upper}_MODEL_ID", "").strip() or preset[f"{modality}_model"],
         "api_timeout_seconds": int(os.getenv("CONVOEASE_API_TIMEOUT", "60")),
+        "audio_formats": preset.get("audio_formats", ()),
         "reasoning_effort": os.getenv("CONVOEASE_REASONING_EFFORT", "").strip().lower(),
         "audio_mode": preset["audio_mode"],
     }

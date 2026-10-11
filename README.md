@@ -14,6 +14,7 @@ ConvoEase is a group chat where an AI moderator checks every message — text, i
 - **Admin dashboard** with pass/flag rates, reasons, trends, and a trust score per member.
 - **Any language.** The moderator judges meaning and intent in the original language, and decodes leetspeak (e.g. `1d10t`).
 - Prompt-injection and spam filters run before the AI is called.
+- **Material Design 3 interface** with light/dark themes, four accent colors and a phone layout. Photos are shrunk and voice notes converted to WAV in the browser before upload.
 
 ## Quick start (on your computer)
 
@@ -50,7 +51,8 @@ Old accounts keep their passwords (they are re-hashed securely at next login).
 | AI | NVIDIA only; audio needed local Whisper + PyTorch (~2 GB) | Gemini by default; Groq, NVIDIA or any OpenAI-compatible API; audio via API |
 | Install size | over 2 GB | ~170 MB |
 | Server | Flask dev server | Gunicorn, Dockerfile, Render blueprint, health check |
-| Abuse protection | none | Per-user rate limits, upload size and file-type checks |
+| Abuse protection | none | Per-user rate limits, upload size and file-type checks, strict Content-Security-Policy |
+| Interface | Single 2,400-line script | Material Design 3, split into small modules, light/dark, mobile layout |
 
 Bugs fixed along the way:
 
@@ -93,7 +95,9 @@ main.py                     Flask app and REST API
 core_processing_engine.py   Moderation plugins (text, image, audio)
 backends/                   AI backends (hosted API or local models)
 database/Database_processing/  Database tables and data access
-Frontend/                   The web interface (plain HTML/CSS/JS)
+Frontend/                   The web interface (plain HTML/CSS/JS modules, no build step)
+  css/tokens.css            Material 3 color schemes (generated from seed colors)
+  js/                       main, shell, chat, dashboard, settings, dialogs, media helpers
 scripts/                    One-off tools (v4 data import)
 testing/                    pytest, Playwright and Locust suites
 paper_artifacts/            Data and scripts behind the paper
@@ -108,6 +112,13 @@ pytest testing/pytest -q
 ```
 
 The suite uses a throwaway database and a fake AI, so it needs no API key. To run it against Postgres, set `CONVOEASE_TEST_DATABASE_URL`.
+
+Browser tests (real Chromium, fake AI):
+
+```bash
+playwright install chromium     # once
+pytest testing/e2e -q
+```
 
 ## Reproducing the paper results
 

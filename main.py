@@ -297,6 +297,21 @@ class RateLimiter:
             return True
 
 
+# Scripts only from this site; Google Fonts for typography and icons.
+CONTENT_SECURITY_POLICY = "; ".join([
+    "default-src 'self'",
+    "script-src 'self'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data: blob:",
+    "media-src 'self' blob:",
+    "connect-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+])
+
 # (max requests, window in seconds) per bucket
 RATE_LIMITS = {
     "auth": (10, 60),      # per IP: login / register attempts
@@ -363,6 +378,8 @@ def create_app(test_config=None):
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "same-origin")
+        if response.mimetype == "text/html":
+            response.headers.setdefault("Content-Security-Policy", CONTENT_SECURITY_POLICY)
         if request.path.startswith("/api/"):
             response.headers.setdefault("Cache-Control", "no-store")
         if request.path.startswith("/api/") and (
@@ -847,6 +864,7 @@ def create_app(test_config=None):
 
         Query params:
             after               only messages with seq greater than this
+            before              only messages with seq lower than this (older pages)
             limit               newest N messages (default 200, max 500)
             include_own_flagged 1 to include the caller's held messages
         """
@@ -855,8 +873,9 @@ def create_app(test_config=None):
             return error
         try:
             after = max(0, int(request.args.get("after", "0")))
+            before = max(0, int(request.args.get("before", "0")))
         except ValueError:
-            after = 0
+            after = before = 0
         try:
             limit = max(1, min(int(request.args.get("limit", DEFAULT_MESSAGE_PAGE)), MAX_MESSAGE_PAGE))
         except ValueError:
@@ -864,8 +883,10 @@ def create_app(test_config=None):
         username = current_user()
         own_flagged = username if request.args.get("include_own_flagged") in {"1", "true"} else None
 
-        rows = MessageStore.get_visible_messages(group_id, after_seq=after, limit=limit, own_flagged_for=own_flagged)
-        if rows:
+        rows = MessageStore.get_visible_messages(
+            group_id, after_seq=after, before_seq=before, limit=limit, own_flagged_for=own_flagged
+        )
+        if rows and not before:
             GroupStore.mark_read(group_id, username, max(row["seq"] for row in rows))
         return safe_json({"success": True, "messages": [_public_message(row) for row in rows]})
 
@@ -1246,6 +1267,9 @@ def create_app(test_config=None):
         ext, mime_type = audio_format(str(data.get("mime_type", "audio/wav")))
         if not ext:
             return _error("Unsupported audio format.", 400)
+        accepted = AUDIO_MODEL_CONFIG.get("audio_formats") if AUDIO_MODEL_CONFIG.get("backend") == "api" else ()
+        if accepted and ext not in accepted:
+            return _error(f"Please send {' or '.join(f.upper() for f in accepted)} audio.", 400)
 
         audio_plugin = engine.get_plugin("audio_moderation")
         audio_backend = _plugin_backend_name(audio_plugin)
@@ -1531,6 +1555,7 @@ def create_app(test_config=None):
                 "image": bool(ready.get("image_moderation")),
                 "audio": bool(ready.get("audio_moderation")),
             },
+            "audio_formats": list(AUDIO_MODEL_CONFIG.get("audio_formats") or []),
             "limits": {
                 "message_chars": MAX_MESSAGE_CHARS,
                 "image_mb": MAX_IMAGE_BYTES // (1024 * 1024),

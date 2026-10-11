@@ -86,7 +86,7 @@ class MessageStore:
         return message_id
 
     @staticmethod
-    def get_visible_messages(group_id, after_seq=0, limit=None, own_flagged_for=None):
+    def get_visible_messages(group_id, after_seq=0, limit=None, own_flagged_for=None, before_seq=0):
         """Messages members can see (PASS and DELETED), oldest first.
 
         own_flagged_for: also include that user's own FLAGGED messages, so they
@@ -99,6 +99,8 @@ class MessageStore:
         query = select(messages).where(and_(messages.c.group_id == group_id, visible))
         if after_seq:
             query = query.where(messages.c.seq > after_seq)
+        if before_seq:
+            query = query.where(messages.c.seq < before_seq)
         if limit:
             rows = DBManager.fetch_all(query.order_by(messages.c.seq.desc()).limit(limit))
             return rows[::-1]
