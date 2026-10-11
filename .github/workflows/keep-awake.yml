@@ -1,0 +1,27 @@
+# Render's free plan puts the app to sleep after 15 minutes without visitors,
+# and waking it takes about a minute. Pinging the health check every 10
+# minutes keeps it awake. One service running all month uses about 744 of the
+# 750 free hours Render gives each workspace.
+#
+# Set the repository variable APP_URL (Settings -> Secrets and variables ->
+# Actions -> Variables), e.g. https://convoease.onrender.com
+# Until it is set, this workflow does nothing.
+name: Keep app awake
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    if: ${{ vars.APP_URL != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping health check
+        run: curl --fail --silent --show-error --max-time 100 --retry 2 --retry-delay 5 "${APP_URL%/}/healthz"
+        env:
+          APP_URL: ${{ vars.APP_URL }}
