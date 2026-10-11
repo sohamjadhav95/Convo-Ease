@@ -1,0 +1,12 @@
+# Optional: run AI models on your own machine instead of a hosted API.
+# Large download (PyTorch alone is ~2 GB). Not needed for normal deployment.
+# Use with CONVOEASE_MODEL_MODE=local (see README).
+-r ../requirements.txt
+
+torch
+transformers>=4.50
+protobuf
+pillow
+numpy
+openai-whisper>=20250625
+imageio-ffmpeg>=0.6.0

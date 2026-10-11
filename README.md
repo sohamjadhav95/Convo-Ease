@@ -91,6 +91,10 @@ Each modality can be switched separately with `CONVOEASE_TEXT_BACKEND`, `CONVOEA
 ## Project layout
 
 ```text
+docs/                       Deployment guides, reports, research paper & assets
+  reports/                  Evaluation and analysis reports
+  research/                 Research paper PDF
+  assets/                   Media & promotional assets
 main.py                     Flask app and REST API
 core_processing_engine.py   Moderation plugins (text, image, audio)
 backends/                   AI backends (hosted API or local models)

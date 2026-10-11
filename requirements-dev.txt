@@ -1,7 +1,1 @@
-# Tests and tooling. Not needed on the server.
--r requirements.txt
-
-pytest>=8.3
-playwright>=1.50
-locust>=2.30
-pyttsx3
+-r requirements/dev.txt

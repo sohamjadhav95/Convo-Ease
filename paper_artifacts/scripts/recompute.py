@@ -3,7 +3,12 @@ import numpy as np
 import json
 import math
 
-file_path = 'paper_artifacts/benchmark_raw_1200.csv'
+from pathlib import Path
+
+artifacts_dir = Path(__file__).resolve().parents[1]
+file_path = artifacts_dir / 'benchmark_raw_1200.csv'
+if not file_path.exists():
+    file_path = Path('paper_artifacts/benchmark_raw_1200.csv')
 df = pd.read_csv(file_path)
 
 out = []
